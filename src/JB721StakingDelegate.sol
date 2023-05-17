@@ -90,7 +90,6 @@ contract JB721StakingDelegate is Votes, JB721Delegate, IJB721StakingDelegate {
                 // Add the staked value that the nft represents
                 // and increment the loop
                 _value += stakingTokenBalance[_tokenIds[_i++]];
-                ++ _i;
             }
         }
     }
