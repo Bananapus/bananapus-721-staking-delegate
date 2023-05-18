@@ -25,5 +25,4 @@ struct JB721TierParams {
   bool allowManualMint;
   bool shouldUseReservedTokenBeneficiaryAsDefault;
   bool transfersPausable;
-  bool useVotingUnits;
 }
