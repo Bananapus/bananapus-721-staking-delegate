@@ -1,14 +1,33 @@
 [profile.default]
-src = 'src'
+# grant access to the deployment addresses for the registry test:
+fs_permissions = [{ access = "read", path = "./node_modules/@jbx-protocol/juice-delegates-registry/broadcast/Deploy.s.sol"}]
+libs = ['lib', 'node_modules']
 out = 'out'
-libs = ['lib']
-optimizer_runs = 200
-verbosity = 3 # display errors
-match_contract = "Unit" # only runs unit tests by default
-sizes = true
+src = 'contracts'
+test = 'forge-test'
+script = 'scripts'
+gas_reports_ignore = [
+    "JBTokenStore",
+    "JBSplitsStore",
+    "JBSingleTokenPaymentTerminalStore",
+    "JBProjects",
+    "JBFundingCycleStore",
+    "JBETHPaymentTerminal",
+    "JBDirectory",
+    "JBController",
+    "AccessJBLib",
+    "JBIpfsDecoder",
+    "ForTest_JBTiered721Delegate",
+    "ForTest_JBTiered721DelegateStore",
+    "JBTiered721DelegateStore",
+]
+remappings = [
+    "ds-test/=lib/forge-std/lib/ds-test/src/",
+    "forge-std/=lib/forge-std/src/",
+]
 
-[profile.CI] # run via FOUNDRY_PROFILE=CI foundry test
-fs_permissions = [{ access = "read", path = "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet"}] # Get the deployment addresses for forking
-match_contract = "Unit || Fork" 
+optimizer_runs = 200
+
+block_timestamp = 1674745056
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

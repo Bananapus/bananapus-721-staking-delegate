@@ -1,4 +1,4 @@
-name: juice-contracts-template-tests
+name: juice-contracts-system-tests
 on:
   pull_request:
     branches:
@@ -15,7 +15,7 @@ jobs:
           submodules: recursive
       - uses: actions/setup-node@v1
         with:
-          node-version: 14
+          node-version: 16
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
@@ -49,6 +49,4 @@ jobs:
       - name: install libraries
         run: git submodule update --init
       - name: Run tests
-        run: FOUNDRY_PROFILE=CI forge snapshot
-      - name: Check contract sizes
-        run: forge build --sizes
+        run: forge snapshot --diff --force --optimize -vvv

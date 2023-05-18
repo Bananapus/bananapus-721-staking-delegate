@@ -1,19 +1,31 @@
 {
+  "name": "@jbx-protocol/juice-721-delegate",
+  "bugs": {
+    "url": "https://github.com/jbx-protocol/juice-721-delegate/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jbx-protocol/juice-721-delegate"
+  },
+  "version": "6.0.0",
+  "license": "MIT",
   "dependencies": {
-    "@jbx-protocol/juice-contracts-v3": "^2.0.3",
-    "@jbx-protocol/juice-721-delegate": "jbx-protocol/juice-721-delegate#version/3.2",
-    "@openzeppelin/contracts": "^4.8.1",
-    "@paulrberg/contracts": "^3.7.0"
+    "@jbx-protocol/juice-contracts-v3": "^2.0.4",
+    "@jbx-protocol/juice-delegates-registry": "^1.0.0",
+    "@jbx-protocol/juice-ownable": "https://github.com/jbx-protocol/juice-ownable",
+    "@openzeppelin/contracts": "^4.6.0",
+    "@paulrberg/contracts": "^3.7.0",
+    "prb-math": "^2.4.3"
+  },
+  "devDependencies": {
+    "prettier": "^2.4.0",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "solhint": "^3.3.6",
+    "solhint-plugin-prettier": "^0.0.5"
   },
   "scripts": {
-    "test": "forge test",
-    "test:fork": "FOUNDRY_PROFILE=CI forge test",
-    "size": "forge build --sizes",
-    "coverage": "forge coverage --match-path ./src/*.sol --report lcov --report summary",
-    "doc": "forge doc",
-    "deploy:mainnet": "source .env && forge script DeployMainnet --broadcast --network mainnet --rpc-url $RPC_MAINNET --verify --ledger --sender $SENDER_MAINNET",
-    "deploy:goerli": "source .env && forge script DeployGoerli --broadcast --network mainnet --rpc-url $RPC_GOERLI --verify --ledger --sender $SENDER_GOERLI",
-    "tree": "forge tree",
-    "lint": "forge fmt"
+    "pretty": "prettier --write \"./**/*.{js,jsx,json,sol}\"",
+    "deploy-goerli": "source .env && forge script DeployGoerli --rpc-url $GOERLI_RPC_PROVIDER_URL --broadcast --mnemonic-paths mnemonic.txt --verify --etherscan-api-key $ETHERSCAN_API_KEY --sender $SENDER_ADDRESS --optimize --optimizer-runs 200 -vvv",
+    "deploy-mainnet": "source .env && forge script DeployMainnet --rpc-url $MAINNET_RPC_PROVIDER_URL --broadcast --mnemonic-paths mnemonic.txt --verify --etherscan-api-key $ETHERSCAN_API_KEY --sender $SENDER_ADDRESS --optimize --optimizer-runs 200 -vvv"
   }
 }
