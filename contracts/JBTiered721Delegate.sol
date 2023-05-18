@@ -59,6 +59,11 @@ contract JBTiered721Delegate is Votes, JBOwnable, JB721Delegate, IJBTiered721Del
   */
   mapping(uint256 => uint256) public stakingTokenBalance;
 
+  /**
+    * @dev A mapping of (current) voting power for the users
+  */
+  mapping(address => uint256) public userVotingPower;
+
   /** 
     @notice
     Info that contextualized the pricing of tiers, packed into a uint256. 
