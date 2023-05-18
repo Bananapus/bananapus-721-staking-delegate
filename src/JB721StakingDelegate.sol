@@ -6,8 +6,16 @@ import "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
 import "./interfaces/IJB721StakingDelegate.sol";
+import "./interfaces/IJBTiered721MinimalDelegate.sol";
+import "./interfaces/IJBTiered721MinimalDelegateStore.sol";
 
-contract JB721StakingDelegate is Votes, JB721Delegate, IJB721StakingDelegate {
+contract JB721StakingDelegate is
+    Votes,
+    JB721Delegate,
+    IJB721StakingDelegate,
+    IJBTiered721MinimalDelegate,
+    IJBTiered721MinimalDelegateStore
+{
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
@@ -46,27 +54,85 @@ contract JB721StakingDelegate is Votes, JB721Delegate, IJB721StakingDelegate {
     /**
      * @notice
      * Contract metadata uri.
-     * 
+     *
      */
-    string public contractURI;
+    string public override contractURI;
 
     /**
      * @notice
      * The common base for the tokenUri's
-     * 
+     *
      */
     string public baseURI;
 
     /**
      * @notice
      * encoded baseURI to be used when no token resolver provided
-     * 
+     *
      */
     bytes32 public encodedIPFSUri;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
+
+    function tierOf(
+        address,
+        uint256 _id,
+        bool _includeResolvedUri
+    ) external view returns (JB721Tier memory tier) {
+        _includeResolvedUri;
+
+        uint256 _tierMinted = 100;
+        uint256 _price = 1 ether;
+        bytes32 _encodedIPFSUri;
+
+        return
+            JB721Tier({
+                id: _id,
+                price: _price,
+                remainingQuantity: type(uint128).max - _tierMinted,
+                initialQuantity: type(uint128).max,
+                votingUnits: _price,
+                reservedRate: type(uint256).max,
+                reservedTokenBeneficiary: address(0),
+                royaltyRate: 0,
+                royaltyBeneficiary: address(0),
+                encodedIPFSUri: _encodedIPFSUri,
+                category: 0,
+                allowManualMint: false,
+                transfersPausable: false,
+                useVotingUnits: false
+            });
+    }
+
+    function store() external view override returns (address) {
+        // We store everything at this contract to save some gas on the calls.
+        return address(this);
+    }
+
+    function flagsOf(address) external pure returns (JBTiered721Flags memory) {
+        return
+            JBTiered721Flags({
+                lockReservedTokenChanges: true,
+                lockVotingUnitChanges: true,
+                lockManualMintingChanges: true,
+                preventOverspending: true
+            });
+    }
+
+    function redemptionWeightOf(
+        address,
+        uint256[] memory _tokenIds
+    ) external view returns (uint256 weight) {
+        return _redemptionWeightOf(_tokenIds);
+    }
+
+    function totalRedemptionWeight(
+        address
+    ) external view returns (uint256 weight) {
+        return _getTotalSupply();
+    }
 
     //*********************************************************************//
     // -------------------------- public views --------------------------- //
@@ -84,15 +150,7 @@ contract JB721StakingDelegate is Votes, JB721Delegate, IJB721StakingDelegate {
         uint256[] memory _tokenIds,
         JBRedeemParamsData calldata
     ) public view virtual override returns (uint256 _value) {
-        uint256 _nOfTokens = _tokenIds.length;
-        for (uint256 _i; _i < _nOfTokens; ) {
-            unchecked {
-                // Add the staked value that the nft represents
-                // and increment the loop
-                _value += stakingTokenBalance[_tokenIds[_i++]];
-                ++ _i;
-            }
-        }
+        return _redemptionWeightOf(_tokenIds);
     }
 
     /** 
@@ -164,17 +222,20 @@ contract JB721StakingDelegate is Votes, JB721Delegate, IJB721StakingDelegate {
     /**
      * @notice
      * The metadata URI of the provided token ID.
-     * 
+     *
      * @dev
      * Defer to the tokenUriResolver if set, otherwise, use the tokenUri set with the token's tier.
-     * 
-     * @param _tokenId The ID of the token to get the tier URI for. 
-     * 
+     *
+     * @param _tokenId The ID of the token to get the tier URI for.
+     *
      * @return The token URI corresponding with the tier or the tokenUriResolver URI.
      */
-    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override returns (string memory) {
         // If a token URI resolver is provided, use it to resolve the token URI.
-        if (address(uriResolver) != address(0)) return uriResolver.getUri(_tokenId);
+        if (address(uriResolver) != address(0))
+            return uriResolver.getUri(_tokenId);
 
         // Return the token URI for the token's tier.
         return JBIpfsDecoder.decode(baseURI, encodedIPFSUri);
@@ -245,5 +306,23 @@ contract JB721StakingDelegate is Votes, JB721Delegate, IJB721StakingDelegate {
         _transferVotingUnits(_from, _to, _stakingValue);
 
         super._afterTokenTransfer(_from, _to, _tokenId);
+    }
+
+    /**
+     * @notice calculates the combined redemption weight of the given token IDs.
+     * @param _tokenIds The IDs of the tokens to get the cumulative redemption weight of.
+     */
+    function _redemptionWeightOf(
+        uint256[] memory _tokenIds
+    ) internal view returns (uint256 _weight) {
+        uint256 _nOfTokens = _tokenIds.length;
+        for (uint256 _i; _i < _nOfTokens; ) {
+            unchecked {
+                // Add the staked value that the nft represents
+                // and increment the loop
+                _weight += stakingTokenBalance[_tokenIds[_i++]];
+                ++_i;
+            }
+        }
     }
 }
