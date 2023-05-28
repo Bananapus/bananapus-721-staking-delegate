@@ -20,6 +20,8 @@ contract JB721StakingDelegate is
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
     error INVALID_TOKEN();
+    error OVERSPENDING();
+    error INVALID_METADATA();
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -254,20 +256,36 @@ contract JB721StakingDelegate is
     function _processPayment(
         JBDidPayData calldata _data
     ) internal virtual override {
-        uint256 _tokenId;
+         uint256 _leftoverAmount = _data.amount.value;
 
-        // Increment the counter (which also reports the total number minted)
-        unchecked {
-            _tokenId = ++numberOfTokensMinted;
+        // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
+        // Skip another 32 bytes reserved for generic extension parameters.
+        // Check the 4 bytes interfaceId to verify the metadata is intended for this contract.
+        if (
+            _data.metadata.length > 68 &&
+            bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId
+        ) {
+            // TODO: Check if we should be using this interface or use another one
+
+            // Keep a reference to the the specific tier IDs to mint.
+            uint16[] memory _tierIdsToMint;
+
+            // Decode the metadata.
+            (, , , , _tierIdsToMint) = abi.decode(
+                _data.metadata,
+                (bytes32, bytes32, bytes4, bool, uint16[])
+            );
+            
+            // Mint the specified tiers
+            _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
+            // If 
+            if(_leftoverAmount != 0)
+                revert OVERSPENDING();
+        } else {
+            // For this delegate the user needs to pass the correct metadata
+            revert INVALID_METADATA();
         }
 
-        // Track how much this NFT is worth
-        stakingTokenBalance[_tokenId] = _data.amount.value;
-
-        // TODO: Add tokenUri stuff
-
-        // Mint the token.
-        _mint(_data.beneficiary, _tokenId);
     }
 
     /**
@@ -282,6 +300,42 @@ contract JB721StakingDelegate is
         address _account
     ) internal view virtual override returns (uint256 units) {
         return userVotingPower[_account];
+    }
+
+    function _mintTiers(
+        uint256 _value,
+        uint16[] memory _tierIdsToMint,
+        address _beneficiary
+    ) internal returns (uint256 _leftoverAmount) {
+        _value; _tierIdsToMint; _beneficiary;
+
+        uint256 _mintsLength = _tierIdsToMint.length;
+
+         for (uint256 _i; _i < _mintsLength; ) {
+            uint256 _tokenId;
+
+            // TODO: replace with a correct amount
+            uint256 _mintValue = _value / _mintsLength;
+
+            // Decrease the amount we have left to mint with
+            _value -= _mintValue;
+
+            // TODO: replace with a proper tierID
+            unchecked {
+                _tokenId = ++numberOfTokensMinted;
+            }
+
+            // Track how much this NFT is worth
+            stakingTokenBalance[_tokenId] = _mintValue;
+
+            // Mint the token.
+            _mint(_beneficiary, _tokenId);
+
+            unchecked {
+                ++_i;
+            }
+         }
+        return _value;
     }
 
     /**
