@@ -8,6 +8,7 @@ import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
 import "./interfaces/IJB721StakingDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegateStore.sol";
+import "./struct/JB721StakingTier.sol";
 
 contract JB721StakingDelegate is
     Votes,
@@ -20,8 +21,15 @@ contract JB721StakingDelegate is
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
     error INVALID_TOKEN();
+    error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
+    error INSUFFICIENT_VALUE();
     error OVERSPENDING();
     error INVALID_METADATA();
+
+    //*********************************************************************//
+    // -------------------- private constant properties ------------------ //
+    //*********************************************************************//
+    uint256 private constant _ONE_BILLION = 1_000_000_000;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
@@ -43,9 +51,14 @@ contract JB721StakingDelegate is
     mapping(address => uint256) public userVotingPower;
 
     /**
-     * @notice
+     * @dev 
      */
-    uint256 public numberOfTokensMinted;
+    mapping(uint256 => uint256) numberOfTokensMintedOfTier;
+
+    // /**
+    //  * @notice
+    //  */
+    // uint256 public numberOfTokensMinted;
 
     /**
       @notice
@@ -86,7 +99,7 @@ contract JB721StakingDelegate is
         _includeResolvedUri;
 
         uint256 _tierMinted = 100;
-        uint256 _price = 1 ether;
+        uint256 _price = _getTierMinStake(uint16(_id));
         bytes32 _encodedIPFSUri;
 
         return
@@ -261,31 +274,38 @@ contract JB721StakingDelegate is
         // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
         // Skip another 32 bytes reserved for generic extension parameters.
         // Check the 4 bytes interfaceId to verify the metadata is intended for this contract.
-        if (
-            _data.metadata.length > 68 &&
-            bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId
-        ) {
-            // TODO: Check if we should be using this interface or use another one
+        if(_data.metadata.length > 68){
+            if(bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId){
+                 // Keep a reference to the the specific tier IDs to mint.
+                JB721StakingTier[] memory _tierIdsToMint;
 
-            // Keep a reference to the the specific tier IDs to mint.
-            uint16[] memory _tierIdsToMint;
+                // Decode the metadata.
+                (, , , , _tierIdsToMint) = abi.decode(
+                    _data.metadata,
+                    (bytes32, bytes32, bytes4, bool, JB721StakingTier[])
+                );
 
-            // Decode the metadata.
-            (, , , , _tierIdsToMint) = abi.decode(
-                _data.metadata,
-                (bytes32, bytes32, bytes4, bool, uint16[])
-            );
-            
-            // Mint the specified tiers
-            _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
-            // If 
-            if(_leftoverAmount != 0)
-                revert OVERSPENDING();
-        } else {
-            // For this delegate the user needs to pass the correct metadata
-            revert INVALID_METADATA();
+                // Mint the specified tiers with the custom stake amount
+                _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
+
+            }else if (bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId) {
+                // Keep a reference to the the specific tier IDs to mint.
+                uint16[] memory _tierIdsToMint;
+
+                // Decode the metadata.
+                (, , , , _tierIdsToMint) = abi.decode(
+                    _data.metadata,
+                    (bytes32, bytes32, bytes4, bool, uint16[])
+                );
+                
+                // Mint the specified tiers
+                _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
+            }
         }
 
+        // The user has to spend all of their tokens
+        if(_leftoverAmount != 0)
+            revert OVERSPENDING();
     }
 
     /**
@@ -307,35 +327,112 @@ contract JB721StakingDelegate is
         uint16[] memory _tierIdsToMint,
         address _beneficiary
     ) internal returns (uint256 _leftoverAmount) {
-        _value; _tierIdsToMint; _beneficiary;
-
+        _leftoverAmount = _value;
         uint256 _mintsLength = _tierIdsToMint.length;
 
          for (uint256 _i; _i < _mintsLength; ) {
-            uint256 _tokenId;
+            uint16 _tierId = _tierIdsToMint[_i];
 
-            // TODO: replace with a correct amount
-            uint256 _mintValue = _value / _mintsLength;
+            uint256 _tierMinAmount = _getTierMinStake(_tierId);
 
-            // Decrease the amount we have left to mint with
-            _value -= _mintValue;
+            if (_leftoverAmount < _tierMinAmount)
+                revert INSUFFICIENT_VALUE();
 
-            // TODO: replace with a proper tierID
             unchecked {
-                _tokenId = ++numberOfTokensMinted;
+                _leftoverAmount -= _tierMinAmount;
             }
 
-            // Track how much this NFT is worth
-            stakingTokenBalance[_tokenId] = _mintValue;
-
-            // Mint the token.
-            _mint(_beneficiary, _tokenId);
+            _mintTier(_tierId, _tierMinAmount, _beneficiary);
 
             unchecked {
                 ++_i;
             }
          }
-        return _value;
+    }
+
+    function _mintTiersWithCustomAmount(
+        uint256 _value,
+        JB721StakingTier[] memory _tiers,
+        address _beneficiary
+     ) internal returns (uint256 _leftoverAmount) {
+        _leftoverAmount = _value;
+        uint256 _mintsLength = _tiers.length;
+
+        for (uint256 _i; _i < _mintsLength; ) {
+            uint256 _tierMinAmount = _getTierMinStake(_tiers[_i].tierId);
+
+            if (_tiers[_i].amount < _tierMinAmount)
+                revert STAKE_NOT_ENOUGH_FOR_TIER(_tiers[_i].tierId, _tierMinAmount, _tiers[_i].amount);
+
+
+            if (_leftoverAmount < _tiers[_i].amount)
+                revert INSUFFICIENT_VALUE();
+
+            unchecked {
+                _leftoverAmount -= _tiers[_i].amount;
+            }
+
+            _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
+
+            unchecked {
+                ++_i;
+            }
+        }
+     }
+
+
+    function _mintTier(
+        uint16 _tierId,
+        uint256 _stakeAmount,
+        address _beneficiary
+    ) internal returns (uint256 _tokenId) {
+
+        unchecked {
+            _tokenId = _generateTokenId(
+                _tierId,
+                ++numberOfTokensMintedOfTier[_tierId]
+            );
+        }
+
+        // Track how much this NFT is worth
+        stakingTokenBalance[_tokenId] = _stakeAmount;
+
+        // Mint the token.
+        _mint(_beneficiary, _tokenId);
+    }
+
+    function _getTierMinStake(uint16 _tier) internal view returns (uint256 _minStakeAmount) {
+        _tier;
+        // TODO: Implement
+        return 100 ether;
+    }
+
+    /** 
+        @notice
+        Finds the token ID and tier given a contribution amount. 
+
+        @param _tierId The ID of the tier to generate an ID for.
+        @param _tokenNumber The number of the token in the tier.
+
+        @return The ID of the token.
+    */
+    function _generateTokenId(uint256 _tierId, uint256 _tokenNumber) internal pure returns (uint256) {
+        return (_tierId * _ONE_BILLION) + _tokenNumber;
+    }
+
+    /** 
+        @notice
+        The tier number of the provided token ID. 
+
+        @dev
+        Tier's are 1 indexed from the `tiers` array, meaning the 0th element of the array is tier 1.
+
+        @param _tokenId The ID of the token to get the tier number of. 
+
+        @return The tier number of the specified token ID.
+    */
+    function tierIdOfToken(uint256 _tokenId) public pure returns (uint256) {
+        return _tokenId / _ONE_BILLION;
     }
 
     /**
