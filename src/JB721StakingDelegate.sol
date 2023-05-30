@@ -5,6 +5,8 @@ import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBTokenUriResolve
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
+import "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import "./interfaces/IJB721StakingDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegateStore.sol";
@@ -38,7 +40,10 @@ contract JB721StakingDelegate is
       @notice
       The address of the origin 'JB721StakingDelegate', used to check in the init if the contract is the original or not
     */
-    address public override codeOrigin;
+    address public immutable override codeOrigin;
+
+
+    IERC20 public stakingToken;
 
     /**
      * @dev A mapping of staked token balances per id
@@ -53,7 +58,7 @@ contract JB721StakingDelegate is
     /**
      * @dev 
      */
-    mapping(uint256 => uint256) numberOfTokensMintedOfTier;
+    mapping(uint256 => uint256) public numberOfTokensMintedOfTier;
 
     // /**
     //  * @notice
@@ -208,6 +213,7 @@ contract JB721StakingDelegate is
 
     function initialize(
         uint256 _projectId,
+        IERC20 _stakingToken,
         IJBDirectory _directory,
         IJBTokenUriResolver _uriResolver,
         string memory _name,
@@ -221,6 +227,8 @@ contract JB721StakingDelegate is
 
         // Stop re-initialization.
         if (projectId != 0) revert();
+
+        stakingToken = _stakingToken;
 
         uriResolver = _uriResolver;
 
@@ -269,7 +277,11 @@ contract JB721StakingDelegate is
     function _processPayment(
         JBDidPayData calldata _data
     ) internal virtual override {
-         uint256 _leftoverAmount = _data.amount.value;
+        // Only payment in the staking token is allowed
+        if(IERC20(_data.amount.token) != stakingToken)
+            revert INVALID_TOKEN();
+
+        uint256 _leftoverAmount = _data.amount.value;
 
         // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
         // Skip another 32 bytes reserved for generic extension parameters.
@@ -288,7 +300,7 @@ contract JB721StakingDelegate is
                 // Mint the specified tiers with the custom stake amount
                 _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
 
-            }else if (bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId) {
+            }else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
 
