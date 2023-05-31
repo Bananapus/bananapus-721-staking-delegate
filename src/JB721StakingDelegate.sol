@@ -42,7 +42,10 @@ contract JB721StakingDelegate is
     */
     address public immutable override codeOrigin;
 
-
+    /**
+     * @notice 
+     * The staking token for this delegate, this is the only token that we accept in payments
+     */
     IERC20 public stakingToken;
 
     /**
@@ -56,14 +59,9 @@ contract JB721StakingDelegate is
     mapping(address => uint256) public userVotingPower;
 
     /**
-     * @dev 
+     * @dev the number of tokens minted for each tierID
      */
     mapping(uint256 => uint256) public numberOfTokensMintedOfTier;
-
-    // /**
-    //  * @notice
-    //  */
-    // uint256 public numberOfTokensMinted;
 
     /**
       @notice
@@ -96,6 +94,12 @@ contract JB721StakingDelegate is
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
+    /**
+     * @notice 
+     * Returns information for a specific tier.
+     * @param _id the TierID
+     * @param _includeResolvedUri if the tierURI should be resolved
+     */
     function tierOf(
         address,
         uint256 _id,
@@ -103,7 +107,6 @@ contract JB721StakingDelegate is
     ) external view returns (JB721Tier memory tier) {
         _includeResolvedUri;
 
-        uint256 _tierMinted = 100;
         uint256 _price = _getTierMinStake(uint16(_id));
         bytes32 _encodedIPFSUri;
 
@@ -111,7 +114,7 @@ contract JB721StakingDelegate is
             JB721Tier({
                 id: _id,
                 price: _price,
-                remainingQuantity: type(uint128).max - _tierMinted,
+                remainingQuantity: type(uint128).max - numberOfTokensMintedOfTier[_id],
                 initialQuantity: type(uint128).max,
                 votingUnits: _price,
                 reservedRate: type(uint256).max,
@@ -126,11 +129,20 @@ contract JB721StakingDelegate is
             });
     }
 
+    /**
+     * @notice 
+     * The store for this delegate.
+     * @dev To save gas and simplify the contract this address is both the delegate and the store.
+     */
     function store() external view override returns (address) {
         // We store everything at this contract to save some gas on the calls.
         return address(this);
     }
 
+    /**
+     * @notice
+     * Flags for the delegate.
+     */
     function flagsOf(address) external pure returns (JBTiered721Flags memory) {
         return
             JBTiered721Flags({
@@ -141,6 +153,14 @@ contract JB721StakingDelegate is
             });
     }
 
+    /**
+     * @notice 
+     * Calculate the redeem value for a set of tokenIds.
+     * 
+     * @param _tokenIds The tokenIds to calculate the redeem value for.
+     * 
+     * @return weight The redemption weight of the set of tokens.
+     */
     function redemptionWeightOf(
         address,
         uint256[] memory _tokenIds
@@ -148,6 +168,13 @@ contract JB721StakingDelegate is
         return _redemptionWeightOf(_tokenIds);
     }
 
+    /**
+     * @notice
+     * The sum of all redemptions .
+     * @param -
+     * 
+     * @return weight the total weight.
+     */
     function totalRedemptionWeight(
         address
     ) external view returns (uint256 weight) {
@@ -291,6 +318,7 @@ contract JB721StakingDelegate is
                  // Keep a reference to the the specific tier IDs to mint.
                 JB721StakingTier[] memory _tierIdsToMint;
 
+                // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
                 (, , , , _tierIdsToMint) = abi.decode(
                     _data.metadata,
@@ -334,6 +362,16 @@ contract JB721StakingDelegate is
         return userVotingPower[_account];
     }
 
+    /**
+     * @notice
+     * Mint tiers according to the spec of the regular 721-delegate.
+     * 
+     * @param _value The value of the payment.
+     * @param _tierIdsToMint The tier ids to mint.
+     * @param _beneficiary The beneficiary of the mint.
+     * 
+     * @return _leftoverAmount The amount that is left over after the tiers were minted.
+     */
     function _mintTiers(
         uint256 _value,
         uint16[] memory _tierIdsToMint,
@@ -362,6 +400,16 @@ contract JB721StakingDelegate is
          }
     }
 
+    /**
+     * @notice 
+     * Mint tiers with a custom stake amount.
+     * 
+     * @param _value The payment value.
+     * @param _tiers The tiers and stake amount to be minted.
+     * @param _beneficiary The beneficiary of the mint.
+     * 
+     * @return _leftoverAmount The amount that is left over after the tiers were minted.
+     */
     function _mintTiersWithCustomAmount(
         uint256 _value,
         JB721StakingTier[] memory _tiers,
@@ -392,7 +440,16 @@ contract JB721StakingDelegate is
         }
      }
 
-
+    /**
+     * @notice 
+     * The accounting logic for minting a single tier.
+     * 
+     * @param _tierId The tier id to mint.
+     * @param _stakeAmount The amount that is being staked.
+     * @param _beneficiary The address that is the beneficiary of the mint.
+     * 
+     * @return _tokenId the id of the token that was minted
+     */
     function _mintTier(
         uint16 _tierId,
         uint256 _stakeAmount,
@@ -413,6 +470,14 @@ contract JB721StakingDelegate is
         _mint(_beneficiary, _tokenId);
     }
 
+    /**
+     * @notice
+     * Get the minimum required stake for the TierID.
+     * 
+     * @param _tier The tierID to get the minimum stake for.
+     * 
+     * @return _minStakeAmount The minimum required stake.
+     */
     function _getTierMinStake(uint16 _tier) internal view returns (uint256 _minStakeAmount) {
         _tier;
         // TODO: Implement
