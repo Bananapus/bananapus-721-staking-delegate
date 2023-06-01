@@ -5,10 +5,10 @@ import "./JB721StakingDelegate.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract JB721StakingDelegateDeployer {
-    /** 
-    @notice 
-    The delegate implementation
-  */
+    /**
+     * @notice
+     * The delegate implementation
+     */
     JB721StakingDelegate public immutable delegateImplementation;
 
     constructor(JB721StakingDelegate _delegateImplementation) {
@@ -17,7 +17,7 @@ contract JB721StakingDelegateDeployer {
 
     /**
      * @notice deploy a staking delegate for a project
-     * 
+     *
      * @param _projectId the prooject to deploy it for
      * @param _directory the JBDirecory to use
      * @param _name the name of the nft
@@ -34,10 +34,10 @@ contract JB721StakingDelegateDeployer {
         string memory _baseURI,
         bytes32 _encodedIPFSUri
     ) external returns (JB721StakingDelegate newDelegate) {
-        newDelegate = JB721StakingDelegate(
-            Clones.clone(address(delegateImplementation))
-        );
+        newDelegate = JB721StakingDelegate(Clones.clone(address(delegateImplementation)));
 
-        newDelegate.initialize(_projectId, _stakingToken, _directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri);
+        newDelegate.initialize(
+            _projectId, _stakingToken, _directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri
+        );
     }
 }

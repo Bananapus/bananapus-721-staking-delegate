@@ -57,9 +57,7 @@ contract EmptyTest_Fork is Test {
         );
         JBSplitsStore = IJBSplitsStore(
             stdJson.readAddress(
-                vm.readFile(
-                    "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBSplitsStore.json"
-                ),
+                vm.readFile("./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBSplitsStore.json"),
                 ".address"
             )
         );
@@ -104,16 +102,8 @@ contract EmptyTest_Fork is Test {
 
         projectId = JBController.launchProjectFor(
             projectOwner,
-            JBProjectMetadata({
-                content: '',
-                domain: 0
-            }),
-            JBFundingCycleData({
-                duration: 0,
-                weight: 0,
-                discountRate: 0,
-                ballot: IJBFundingCycleBallot(address(0))
-            }),
+            JBProjectMetadata({content: "", domain: 0}),
+            JBFundingCycleData({duration: 0, weight: 0, discountRate: 0, ballot: IJBFundingCycleBallot(address(0))}),
             JBFundingCycleMetadata({
                 global: JBGlobalFundingCycleMetadata({
                     allowSetTerminals: true,
@@ -142,7 +132,7 @@ contract EmptyTest_Fork is Test {
             new JBGroupedSplits[](0),
             new JBFundAccessConstraints[](0),
             _terminals,
-            ''
+            ""
         );
     }
 
@@ -156,25 +146,13 @@ contract EmptyTest_Fork is Test {
         stakingToken.approve(address(stakingTerminal), 1000);
 
         // Perform the pay (aka. stake the tokens)
-        stakingTerminal.pay(
-            projectId,
-            1000,
-            address(stakingToken),
-            _payer,
-            0,
-            false,
-            string(""),
-            bytes('')
-        );
+        stakingTerminal.pay(projectId, 1000, address(stakingToken), _payer, 0, false, string(""), bytes(""));
 
         // Balance should be 0
-        assertEq(
-            stakingToken.balanceOf(_payer),
-            0
-        );
+        assertEq(stakingToken.balanceOf(_payer), 0);
     }
 
-      // Test that a pay does not revert
+    // Test that a pay does not revert
     function testPayMintsNFT() public {
         address _payer = address(0x1337);
         _mintTokens(_payer, 1000);
@@ -184,16 +162,7 @@ contract EmptyTest_Fork is Test {
         stakingToken.approve(address(stakingTerminal), 1000);
 
         // Perform the pay (aka. stake the tokens)
-        stakingTerminal.pay(
-            projectId,
-            1000,
-            address(stakingToken),
-            _payer,
-            0,
-            false,
-            string(""),
-            bytes('')
-        );
+        stakingTerminal.pay(projectId, 1000, address(stakingToken), _payer, 0, false, string(""), bytes(""));
 
         // There should now be a single token minted
         // assertEq(
@@ -204,15 +173,11 @@ contract EmptyTest_Fork is Test {
 
     // Helpers
     function _mintTokens(address _to, uint256 _amount) internal {
-        IJBToken _stakingToken= IJBToken(address(stakingToken));
+        IJBToken _stakingToken = IJBToken(address(stakingToken));
         // Prank as being the contract owner (the tokenStore usually)
         vm.startPrank(Ownable(address(stakingToken)).owner());
         // Mint the needed tokens
-        _stakingToken.mint(
-            _stakingToken.projectId(),
-            _to,
-            _amount
-        );
+        _stakingToken.mint(_stakingToken.projectId(), _to, _amount);
         vm.stopPrank();
     }
 }
