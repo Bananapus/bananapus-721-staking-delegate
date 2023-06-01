@@ -72,7 +72,6 @@ contract JB721StakingDelegate is
     /**
      * @notice
      * Contract metadata uri.
-     *
      */
     string public override contractURI;
 
@@ -382,7 +381,6 @@ contract JB721StakingDelegate is
 
          for (uint256 _i; _i < _mintsLength; ) {
             uint16 _tierId = _tierIdsToMint[_i];
-
             uint256 _tierMinAmount = _getTierMinStake(_tierId);
 
             if (_leftoverAmount < _tierMinAmount)
@@ -473,6 +471,7 @@ contract JB721StakingDelegate is
     /**
      * @notice
      * Get the minimum required stake for the TierID.
+     * @dev Reverts if the tierID does not exist
      * 
      * @param _tier The tierID to get the minimum stake for.
      * 
@@ -481,6 +480,8 @@ contract JB721StakingDelegate is
     function _getTierMinStake(uint16 _tier) internal view returns (uint256 _minStakeAmount) {
         _tier;
         // TODO: Implement
+
+        // Has to revert of the tier does not exist
         return 100 ether;
     }
 
