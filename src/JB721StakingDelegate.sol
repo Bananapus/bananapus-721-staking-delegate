@@ -450,7 +450,7 @@ contract JB721StakingDelegate is
      *
      * @return _minStakeAmount The minimum required stake.
      */
-    function _getTierMinStake(uint16 _tier) internal view returns (uint256 _minStakeAmount) {
+    function _getTierMinStake(uint16 _tier) internal pure returns (uint256 _minStakeAmount) {
         _tier;
         // TODO: Implement
 
@@ -517,7 +517,6 @@ contract JB721StakingDelegate is
                 // Add the staked value that the nft represents
                 // and increment the loop
                 _weight += stakingTokenBalance[_tokenIds[_i++]];
-                ++_i;
             }
         }
     }

@@ -19,7 +19,7 @@ contract DelegateTest_Unit is DSTestFull {
 
     function setUp() public {
         // Deploy the delegate
-        JB721StakingDelegate _delegateImplementation = new JB721StakingDelegate();
+        JB721StakingDelegate _delegateImplementation = new JB721StakingDelegateHarness();
 
         // Deploy the deployer
         _deployer = new JB721StakingDelegateDeployer(_delegateImplementation);
@@ -79,6 +79,81 @@ contract DelegateTest_Unit is DSTestFull {
         assertEq(_delegate.stakingTokenBalance(_expectedTokenId), _value);
     }
 
+    function testMint_beneficiaryReceivesVotingPower(
+        address _beneficiary,
+        uint16 _tierId,
+        uint224 _stakingAmount,
+        uint224 _votingPowerPreMint
+    ) public {
+        // Check that we won't overflow the uint224
+        vm.assume(type(uint224).max - _votingPowerPreMint > _stakingAmount);
+        vm.assume(_beneficiary != address(0));
+        
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+
+        // Pre set the voting power
+        _addDelegatedVotingPower(_delegate, _beneficiary, _votingPowerPreMint);
+
+        // Delegate to themselves
+        vm.prank(_beneficiary);
+        _delegate.delegate(_beneficiary);
+
+        // Mint a position for them
+        _delegate.ForTest_mintTo(_tierId, _stakingAmount, _beneficiary);
+
+        // Assert the votingPower was added
+        assertEq(
+            _delegate.getVotes(_beneficiary),
+            _votingPowerPreMint + _stakingAmount
+        );
+    }
+
+
+    function testMint_beneficiaryDoesNotReceiveVotingPowerWhenNotDelegated(
+        address _beneficiary,
+        uint16 _tierId,
+        uint224 _stakingAmount,
+        uint224 _votingPowerPreMint,
+        address _delegateTo
+    ) public {
+        // Check that we won't overflow the uint224
+        vm.assume(type(uint224).max - _votingPowerPreMint > _stakingAmount);
+        // This tests the scenario where these are not the same user
+        vm.assume(_delegateTo != _beneficiary);
+        // Can't mint an NFT to the zero address
+        vm.assume(_beneficiary != address(0));
+        
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+
+        // Pre set the voting power
+        _addDelegatedVotingPower(_delegate, _beneficiary, _votingPowerPreMint);
+
+        // Delegate to someone else
+        if (_delegateTo != address(0)) {
+            vm.prank(_beneficiary);
+            _delegate.delegate(_delegateTo);
+        }
+
+        // Mint a position for them
+        _delegate.ForTest_mintTo(_tierId, _stakingAmount, _beneficiary);
+
+        // Assert the votingPower was *not* added
+        assertEq(
+            _delegate.getVotes(_beneficiary),
+            _votingPowerPreMint
+        );
+
+        // Assert the votingPower was added to the delegate
+        if (_delegateTo != address(0)) {
+            assertEq(
+                _delegate.getVotes(_delegateTo),
+                _stakingAmount
+            );
+        }
+    }
+
     //*********************************************************************//
     // ----------------------------- Helpers ----------------------------- //
     //*********************************************************************//
@@ -87,15 +162,42 @@ contract DelegateTest_Unit is DSTestFull {
         return (_tierId * 1_000_000_000) + _tokenNumber;
     }
 
-    function _deployDelegate() internal returns (JB721StakingDelegate _delegate) {
-        _delegate = _deployer.deploy(
+    function _deployDelegate() internal returns (JB721StakingDelegateHarness _delegate) {
+        _delegate = JB721StakingDelegateHarness(address(_deployer.deploy(
             _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0")
-        );
+        )));
 
         vm.mockCall(
             address(_directory),
             abi.encodeWithSelector(IJBDirectory.isTerminalOf.selector, int256(_projectId), address(_terminal)),
             abi.encode(true)
+        );
+    }
+
+    function _addDelegatedVotingPower(
+        JB721StakingDelegateHarness _delegate,
+        address _beneficiary,
+        uint224 _votingPowerAmount
+    ) internal {
+        // Get a new random address that will delegate to the beneficiary
+        address _delegatee = _newAddress();
+
+        vm.prank(_delegatee);
+        _delegate.delegate(_beneficiary);
+
+        uint256 _votingPowerBefore = _delegate.getVotes(_beneficiary);
+
+        _delegate.ForTest_mintTo(
+            type(uint16).max,
+            _votingPowerAmount,
+            _delegatee
+        );
+
+        // Assert that the voting power was received
+        assertEq(
+            _delegate.getVotes(_beneficiary),
+            _votingPowerAmount + _votingPowerBefore,
+            "Beneficiary of delegated tokens did not receive the voting power"
         );
     }
 
@@ -143,5 +245,12 @@ contract DelegateTest_Unit is DSTestFull {
             memo: "",
             metadata: _metadata
         });
+    }
+}
+
+
+contract JB721StakingDelegateHarness is JB721StakingDelegate {
+    function ForTest_mintTo(uint16 _tierId, uint256 _stakingAmountWorth, address _beneficiary) external {
+        _mintTier(_tierId, _stakingAmountWorth, _beneficiary);
     }
 }
