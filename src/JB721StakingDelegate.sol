@@ -327,6 +327,42 @@ contract JB721StakingDelegate is
     }
 
     /**
+     * @notice 
+     *     Part of IJBFundingCycleDataSource, this function gets called when a project's token holders redeem.
+     * 
+     *     @param _data The Juicebox standard project redemption data.
+     * 
+     *     @return reclaimAmount The amount that should be reclaimed from the treasury.
+     *     @return memo The memo that should be forwarded to the event.
+     *     @return delegateAllocations The amount to send to delegates instead of adding to the beneficiary.
+     */
+    function redeemParams(JBRedeemParamsData calldata _data)
+        public
+        view
+        virtual
+        override
+        returns (uint256 reclaimAmount, string memory memo, JBRedemptionDelegateAllocation[] memory delegateAllocations)
+    {
+        // Make sure fungible project tokens aren't being redeemed too.
+        if (_data.tokenCount > 0) revert UNEXPECTED_TOKEN_REDEEMED();
+
+        // Check the 4 bytes interfaceId and handle the case where the metadata was not intended for this contract
+        // Skip 32 bytes reserved for generic extension parameters.
+        if (_data.metadata.length < 36 || bytes4(_data.metadata[32:36]) != type(IJB721Delegate).interfaceId) {
+            revert INVALID_REDEMPTION_METADATA();
+        }
+
+        // Set the only delegate allocation to be a callback to this contract.
+        delegateAllocations = new JBRedemptionDelegateAllocation[](1);
+        delegateAllocations[0] = JBRedemptionDelegateAllocation(this, 0);
+
+        // Decode the metadata
+        (,, uint256[] memory _decodedTokenIds) = abi.decode(_data.metadata, (bytes32, bytes4, uint256[]));
+
+        return (redemptionWeightOf(_decodedTokenIds, _data), _data.memo, delegateAllocations);
+    }
+
+    /**
      * @notice
      * The voting units for an account from its NFTs across all tiers. NFTs have a tier-specific preset number of voting
      * units.
@@ -474,7 +510,7 @@ contract JB721StakingDelegate is
     /**
      * @notice
      * The tier number of the provided token ID.
-     * 
+     *
      * @dev Tier's are 1 indexed from the `tiers` array, meaning the 0th element of the array is tier 1.
      *
      * @param _tokenId The ID of the token to get the tier number of.

@@ -88,7 +88,7 @@ contract DelegateTest_Unit is DSTestFull {
         // Check that we won't overflow the uint224
         vm.assume(type(uint224).max - _votingPowerPreMint > _stakingAmount);
         vm.assume(_beneficiary != address(0));
-        
+
         // Deploy the delegate
         JB721StakingDelegateHarness _delegate = _deployDelegate();
 
@@ -103,12 +103,8 @@ contract DelegateTest_Unit is DSTestFull {
         _delegate.ForTest_mintTo(_tierId, _stakingAmount, _beneficiary);
 
         // Assert the votingPower was added
-        assertEq(
-            _delegate.getVotes(_beneficiary),
-            _votingPowerPreMint + _stakingAmount
-        );
+        assertEq(_delegate.getVotes(_beneficiary), _votingPowerPreMint + _stakingAmount);
     }
-
 
     function testMint_beneficiaryDoesNotReceiveVotingPowerWhenNotDelegated(
         address _beneficiary,
@@ -123,7 +119,7 @@ contract DelegateTest_Unit is DSTestFull {
         vm.assume(_delegateTo != _beneficiary);
         // Can't mint an NFT to the zero address
         vm.assume(_beneficiary != address(0));
-        
+
         // Deploy the delegate
         JB721StakingDelegateHarness _delegate = _deployDelegate();
 
@@ -140,18 +136,45 @@ contract DelegateTest_Unit is DSTestFull {
         _delegate.ForTest_mintTo(_tierId, _stakingAmount, _beneficiary);
 
         // Assert the votingPower was *not* added
-        assertEq(
-            _delegate.getVotes(_beneficiary),
-            _votingPowerPreMint
-        );
+        assertEq(_delegate.getVotes(_beneficiary), _votingPowerPreMint);
 
         // Assert the votingPower was added to the delegate
         if (_delegateTo != address(0)) {
-            assertEq(
-                _delegate.getVotes(_delegateTo),
-                _stakingAmount
-            );
+            assertEq(_delegate.getVotes(_delegateTo), _stakingAmount);
         }
+    }
+
+    function testBurn_correctAmountOfTokens_redeemEntireSupply(address _beneficiary, JB721StakingTier[] memory _tiers)
+        public
+    {
+        vm.assume(_tiers.length > 0);
+        vm.assume(_beneficiary != address(0));
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+
+        uint256[] memory _tokenIDs = new uint256[](_tiers.length);
+
+        uint224 _amountBeforeOverflow = type(uint224).max;
+        for (uint256 _i; _i < _tiers.length; _i++) {
+            // Make sure if we mint the next tier we stay within the max totalsupply
+            vm.assume(_tiers[_i].amount < _amountBeforeOverflow);
+            _amountBeforeOverflow -= _tiers[_i].amount;
+
+            // Mint the specified position
+            _tokenIDs[_i] = _delegate.ForTest_mintTo(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
+        }
+
+        uint256 _totalStakeValue = type(uint224).max - _amountBeforeOverflow;
+
+        assertEq(_delegate.totalRedemptionWeight(address(0)), _totalStakeValue);
+        assertEq(_delegate.redemptionWeightOf(address(0), _tokenIDs), _totalStakeValue);
+
+        vm.assume(_totalStakeValue > 100 gwei);
+
+        (uint256 _reclaimAmount,,) = _delegate.redeemParams(_buildRedeemData(_beneficiary, _tokenIDs));
+
+        assertEq(_reclaimAmount, _totalStakeValue);
     }
 
     //*********************************************************************//
@@ -163,9 +186,13 @@ contract DelegateTest_Unit is DSTestFull {
     }
 
     function _deployDelegate() internal returns (JB721StakingDelegateHarness _delegate) {
-        _delegate = JB721StakingDelegateHarness(address(_deployer.deploy(
-            _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0")
-        )));
+        _delegate = JB721StakingDelegateHarness(
+            address(
+                _deployer.deploy(
+                    _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0")
+                )
+            )
+        );
 
         vm.mockCall(
             address(_directory),
@@ -187,11 +214,7 @@ contract DelegateTest_Unit is DSTestFull {
 
         uint256 _votingPowerBefore = _delegate.getVotes(_beneficiary);
 
-        _delegate.ForTest_mintTo(
-            type(uint16).max,
-            _votingPowerAmount,
-            _delegatee
-        );
+        _delegate.ForTest_mintTo(type(uint16).max, _votingPowerAmount, _delegatee);
 
         // Assert that the voting power was received
         assertEq(
@@ -224,6 +247,29 @@ contract DelegateTest_Unit is DSTestFull {
         });
     }
 
+    function _buildRedeemData(address _redeemer, uint256[] memory _tokenIds)
+        internal
+        view
+        returns (JBRedeemParamsData memory)
+    {
+        bytes memory _metadata = abi.encode(bytes32(0), type(IJB721Delegate).interfaceId, _tokenIds);
+
+        return JBRedeemParamsData({
+            terminal: _terminal,
+            holder: _redeemer,
+            projectId: _projectId,
+            currentFundingCycleConfiguration: 0,
+            tokenCount: 0,
+            totalSupply: 0,
+            overflow: 0,
+            reclaimAmount: JBTokenAmount({token: address(0), value: 0, decimals: 0, currency: 0}),
+            useTotalOverflow: false,
+            redemptionRate: JBConstants.MAX_REDEMPTION_RATE,
+            memo: "",
+            metadata: _metadata
+        });
+    }
+
     function _buildPayData(address _payer, uint256 _value, address _beneficiary, uint16[] memory _tierIds)
         internal
         view
@@ -248,9 +294,11 @@ contract DelegateTest_Unit is DSTestFull {
     }
 }
 
-
 contract JB721StakingDelegateHarness is JB721StakingDelegate {
-    function ForTest_mintTo(uint16 _tierId, uint256 _stakingAmountWorth, address _beneficiary) external {
-        _mintTier(_tierId, _stakingAmountWorth, _beneficiary);
+    function ForTest_mintTo(uint16 _tierId, uint256 _stakingAmountWorth, address _beneficiary)
+        external
+        returns (uint256 _tokenID)
+    {
+        return _mintTier(_tierId, _stakingAmountWorth, _beneficiary);
     }
 }
