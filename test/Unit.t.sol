@@ -177,6 +177,80 @@ contract DelegateTest_Unit is DSTestFull {
         assertEq(_reclaimAmount, _totalStakeValue);
     }
 
+    function testTransfer_transfersVotingUnits(
+        address _user,
+        address _userDelegate,
+        uint224 _userDelegateVotingPowerBefore,
+        JB721StakingTier memory _token,
+        address _recipient,
+        address _recipientDelegate,
+        uint224 _recipientDelegateVotingPowerBefore
+    ) public {
+        // Check that we won't overflow the uint224
+        vm.assume(type(uint224).max - _userDelegateVotingPowerBefore > _token.amount);
+        vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore > _token.amount);
+        vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore > _userDelegateVotingPowerBefore);
+        // Can't mint or transfer to the zero address
+        vm.assume(_user != address(0) && _recipient != address(0));
+
+        bool _userVotingPowerIsDelegated = _userDelegate != address(0);
+        bool _recipientVotingPowerIsDelegated = _recipientDelegate != address(0);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+
+        // Set the delegates for the user
+        vm.prank(_user);
+        _delegate.delegate(_userDelegate);
+
+        // Set the delegates for the recipient
+        vm.prank(_recipient);
+        _delegate.delegate(_recipientDelegate);
+
+        // Give the user and the recipient their starting votingpower
+        _addDelegatedVotingPower(_delegate, _userDelegate, _userDelegateVotingPowerBefore);
+        _addDelegatedVotingPower(_delegate, _recipientDelegate, _recipientDelegateVotingPowerBefore);
+
+        // Mint the token that is going to be transfered to the recipient
+        uint256 _tokenID = _delegate.ForTest_mintTo(_token.tierId, _token.amount, _user);
+
+        // Check that the delegate received the voting power
+        // (this is just a sanity check)
+        if(_userVotingPowerIsDelegated){
+            assertEq(
+                _delegate.getVotes(_userDelegate),
+                _userDelegateVotingPowerBefore + _token.amount
+            );
+        }else{
+            // If the user has 'delegated' to the zero address this means that their voting power is inactive,
+            // The zero address should never have any voting power
+            assertEq(
+                _delegate.getVotes(_userDelegate),
+                0
+            );
+        }
+        
+        // Transfer the token to the beneficiary
+        vm.prank(_user);
+        _delegate.transferFrom(_user, _recipient, _tokenID);
+
+        // Check that the users delegated voting power has decreased
+        if(_userVotingPowerIsDelegated){
+            assertEq(
+                _delegate.getVotes(_userDelegate),
+                _userDelegateVotingPowerBefore
+            );
+        }
+
+        // And that the recipient delegated voting power has increased
+        if(_recipientVotingPowerIsDelegated){
+            assertEq(
+                _delegate.getVotes(_recipientDelegate),
+                _recipientDelegateVotingPowerBefore + _token.amount
+            );
+        }
+    }
+
     //*********************************************************************//
     // ----------------------------- Helpers ----------------------------- //
     //*********************************************************************//
@@ -215,6 +289,10 @@ contract DelegateTest_Unit is DSTestFull {
         uint256 _votingPowerBefore = _delegate.getVotes(_beneficiary);
 
         _delegate.ForTest_mintTo(type(uint16).max, _votingPowerAmount, _delegatee);
+
+        // If the user has 'delegated' to the zero address this means that their voting power is inactive,
+        // The zero address should never have any voting power
+        if (_beneficiary == address(0)) return;
 
         // Assert that the voting power was received
         assertEq(
