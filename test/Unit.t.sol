@@ -8,6 +8,10 @@ import "../src/JB721StakingDelegate.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 
 contract DelegateTest_Unit is DSTestFull {
+    error INSUFFICIENT_VALUE();
+    error OVERSPENDING();
+    error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
+
     uint256 _projectId = 103;
 
     IERC20 internal _stakingToken = IERC20(_mockContract("staking_token"));
@@ -57,6 +61,64 @@ contract DelegateTest_Unit is DSTestFull {
         assertEq(_delegate.stakingTokenBalance(_expectedTokenId), _value);
     }
 
+     function testMint_customStakeAmount_reverts_tierStakeTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint128 _tierStakeAmount) public {
+        uint128 _tierCost = 100 ether;
+
+        vm.assume(_tierStakeAmount < _tierCost);
+        vm.assume(_beneficiary != address(0));
+        
+        JB721StakingDelegate _delegate = _deployDelegate();
+
+        // Here we specify the incorrect amount, this is not enough stake for this tier
+        // However in the actual payment we do pay enought to mint this tier
+        JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
+        _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierStakeAmount});
+
+        vm.expectRevert(abi.encodeWithSelector(STAKE_NOT_ENOUGH_FOR_TIER.selector, _tierId, _tierCost, _tierStakeAmount));
+
+        vm.prank(address(_terminal));
+        _delegate.didPay(_buildPayData(_payer, _tierCost, _beneficiary, _tiers));
+    }
+
+    function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint128 _paymentAmount) public {
+        uint128 _tierCost = 100 ether;
+
+        vm.assume(_paymentAmount < _tierCost);
+        vm.assume(_beneficiary != address(0));
+        
+        JB721StakingDelegate _delegate = _deployDelegate();
+
+        // Here we specify the (correct) expected amount
+        // However in the actual payment we do not pay enought to mint this
+        JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
+        _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierCost});
+
+        vm.expectRevert(INSUFFICIENT_VALUE.selector);
+
+        vm.prank(address(_terminal));
+        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tiers));
+    }
+
+
+    function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, address _beneficiary, uint16 _tierId, uint128 _paymentAmount) public {
+        uint128 _tierCost = 100 ether;
+
+        vm.assume(_paymentAmount > _tierCost);
+        vm.assume(_beneficiary != address(0));
+        
+        JB721StakingDelegate _delegate = _deployDelegate();
+
+        // Here we specify the (correct) expected amount
+        // However in the actual payment we do not pay enought to mint this
+        JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
+        _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierCost});
+
+        vm.expectRevert(OVERSPENDING.selector);
+
+        vm.prank(address(_terminal));
+        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tiers));
+    }
+
     function testMint_defaultStakeAmount(address _payer, address _beneficiary, uint16 _tierId) public {
         vm.assume(_beneficiary != address(0));
 
@@ -77,6 +139,40 @@ contract DelegateTest_Unit is DSTestFull {
 
         // Check that the token represents the correct amount
         assertEq(_delegate.stakingTokenBalance(_expectedTokenId), _value);
+    }
+
+    function testMint_defaultStakeAmount_reverts_paymentTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint224 _paymentAmount) public {
+        uint128 _tierCost = 100 ether;
+
+        vm.assume(_paymentAmount < _tierCost);
+        vm.assume(_beneficiary != address(0));
+        
+        JB721StakingDelegate _delegate = _deployDelegate();
+
+        uint16[] memory _tierIds = new uint16[](1);
+        _tierIds[0] = _tierId;
+
+        vm.expectRevert(INSUFFICIENT_VALUE.selector);
+
+        vm.prank(address(_terminal));
+        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tierIds));
+    }
+
+    function testMint_defaultStakeAmount_reverts_paymentTooBig(address _payer, address _beneficiary, uint16 _tierId, uint224 _paymentAmount) public {
+        uint128 _tierCost = 100 ether;
+
+        vm.assume(_paymentAmount > _tierCost);
+        vm.assume(_beneficiary != address(0));
+        
+        JB721StakingDelegate _delegate = _deployDelegate();
+
+        uint16[] memory _tierIds = new uint16[](1);
+        _tierIds[0] = _tierId;
+
+        vm.expectRevert(OVERSPENDING.selector);
+
+        vm.prank(address(_terminal));
+        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tierIds));
     }
 
     function testMint_beneficiaryReceivesVotingPower(
