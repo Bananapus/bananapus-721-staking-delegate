@@ -6,6 +6,7 @@ import "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import "@openzeppelin/contracts/utils/Checkpoints.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IJB721StakingDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegate.sol";
@@ -62,6 +63,14 @@ contract JB721StakingDelegate is
      * @dev the number of tokens minted for each tierID
      */
     mapping(uint256 => uint256) public numberOfTokensMintedOfTier;
+
+    /**
+     * @notice
+     * The delegation status for each address and for each tier.
+     *
+     * _delegator The delegator.
+     */
+    mapping(address => address) internal _tierDelegation;
 
     /**
      * @notice
@@ -282,6 +291,38 @@ contract JB721StakingDelegate is
 
     /**
      * @notice
+     * Gets the amount of voting units an address has for a particular tier.
+     *
+     * @param _account The account to get voting units for.
+     *
+     * @return The voting units.
+     */
+    function _getTierVotingUnits(address _account) internal view virtual returns (uint256) {
+        return userVotingPower[_tierDelegation[_account]];
+    }
+
+    /**
+     * @notice
+     * Delegate all of `account`'s voting units for the specified tier to `delegatee`.
+     *
+     * @param _account The account delegating tier voting units.
+     * @param _delegatee The account to delegate tier voting units to.
+     */
+    function _delegateTier(address _account, address _delegatee) internal virtual {
+        // Get the current delegatee
+        address _oldDelegate = _tierDelegation[_account];
+
+        // Store the new delegatee
+        _tierDelegation[_account] = _delegatee;
+
+        emit DelegateChanged(_account, _oldDelegate, _delegatee);
+
+        // Transfer the voting units.
+        _transferVotingUnits(_oldDelegate, _delegatee, _getTierVotingUnits(_account));
+    }
+
+    /**
+     * @notice
      * Process a received payment.
      *
      * @param _data The Juicebox standard project payment data.
@@ -294,6 +335,9 @@ contract JB721StakingDelegate is
 
         uint256 _leftoverAmount = _data.amount.value;
 
+        // Keep a reference to the address that should be given attestation votes from this mint.
+        address _votingDelegate;
+
         // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
         // Skip another 32 bytes reserved for generic extension parameters.
         // Check the 4 bytes interfaceId to verify the metadata is intended for this contract.
@@ -304,19 +348,19 @@ contract JB721StakingDelegate is
 
                 // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
-                (,,,, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, JB721StakingTier[]));
+                (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
 
                 // Mint the specified tiers with the custom stake amount
-                _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
+                _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
             } else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
 
                 // Decode the metadata.
-                (,,,, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, uint16[]));
+                (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, uint16[]));
 
                 // Mint the specified tiers
-                _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
+                _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
             }
         }
 
@@ -382,10 +426,11 @@ contract JB721StakingDelegate is
      * @param _value The value of the payment.
      * @param _tierIdsToMint The tier ids to mint.
      * @param _beneficiary The beneficiary of the mint.
+     * @param _votingDelegate The voting delegate address.
      *
      * @return _leftoverAmount The amount that is left over after the tiers were minted.
      */
-    function _mintTiers(uint256 _value, uint16[] memory _tierIdsToMint, address _beneficiary)
+    function _mintTiers(uint256 _value, uint16[] memory _tierIdsToMint, address _beneficiary, address _votingDelegate)
         internal
         returns (uint256 _leftoverAmount)
     {
@@ -404,6 +449,17 @@ contract JB721StakingDelegate is
                 _leftoverAmount -= _tierMinAmount;
             }
 
+           // Get a reference to the old delegate.
+            address _oldDelegate = _tierDelegation[_beneficiary];
+
+            // If there's either a new delegate or old delegate, increase the delegate weight.
+            if (_votingDelegate != address(0)) {
+                _delegateTier(_beneficiary, _votingDelegate);
+            } else if (_oldDelegate == address(0)) {
+                // if no _votingDelegate provided in metadata & when minting a tier for the first time by default _beneficiary will be the voting delegate
+                _delegateTier(_beneficiary, _beneficiary);
+            }
+
             _mintTier(_tierId, _tierMinAmount, _beneficiary);
 
             unchecked {
@@ -419,10 +475,11 @@ contract JB721StakingDelegate is
      * @param _value The payment value.
      * @param _tiers The tiers and stake amount to be minted.
      * @param _beneficiary The beneficiary of the mint.
+     * @param _votingDelegate The voting delegate address.
      *
      * @return _leftoverAmount The amount that is left over after the tiers were minted.
      */
-    function _mintTiersWithCustomAmount(uint256 _value, JB721StakingTier[] memory _tiers, address _beneficiary)
+    function _mintTiersWithCustomAmount(uint256 _value, JB721StakingTier[] memory _tiers, address _beneficiary, address _votingDelegate)
         internal
         returns (uint256 _leftoverAmount)
     {
@@ -442,6 +499,17 @@ contract JB721StakingDelegate is
 
             unchecked {
                 _leftoverAmount -= _tiers[_i].amount;
+            }
+
+            // Get a reference to the old delegate.
+            address _oldDelegate = _tierDelegation[_beneficiary];
+
+            // If there's either a new delegate or old delegate, increase the delegate weight.
+            if (_votingDelegate != address(0)) {
+                _delegateTier(_beneficiary, _votingDelegate);
+            } else if (_oldDelegate == address(0)) {
+                // if no _votingDelegate provided in metadata & when minting a tier for the first time by default _beneficiary will be the voting delegate
+                _delegateTier(_beneficiary, _beneficiary);
             }
 
             _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
@@ -531,12 +599,14 @@ contract JB721StakingDelegate is
      */
     function _afterTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override {
         uint256 _stakingValue = stakingTokenBalance[_tokenId];
+        address _fromDelegate = _tierDelegation[_from];
+        address _toDelegate = _tierDelegation[_to];
 
-        if (_from != address(0)) userVotingPower[_from] -= _stakingValue;
-        if (_to != address(0)) userVotingPower[_to] += _stakingValue;
+        if (_from != address(0)) userVotingPower[_fromDelegate] -= _stakingValue;
+        if (_to != address(0)) userVotingPower[_toDelegate] += _stakingValue;
 
         // Transfer the voting units.
-        _transferVotingUnits(_from, _to, _stakingValue);
+        _transferVotingUnits(_fromDelegate, _toDelegate, _stakingValue);
 
         super._afterTokenTransfer(_from, _to, _tokenId);
     }
