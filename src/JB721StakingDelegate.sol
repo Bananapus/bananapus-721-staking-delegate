@@ -66,14 +66,6 @@ contract JB721StakingDelegate is
 
     /**
      * @notice
-     * The delegation status for each address and for each tier.
-     *
-     * _delegator The delegator.
-     */
-    mapping(address => address) internal _tierDelegation;
-
-    /**
-     * @notice
      *   The contract that stores and manages the NFT's data.
      */
     IJBTokenUriResolver public uriResolver;
@@ -291,14 +283,15 @@ contract JB721StakingDelegate is
 
     /**
      * @notice
-     * Gets the amount of voting units an address has for a particular tier.
+     * The voting units for an account from its NFTs across all tiers. NFTs have a tier-specific preset number of voting
+     * units.
      *
      * @param _account The account to get voting units for.
      *
-     * @return The voting units.
+     * @return units The voting units for the account.
      */
-    function _getTierVotingUnits(address _account) internal view virtual returns (uint256) {
-        return userVotingPower[_tierDelegation[_account]];
+    function _getVotingUnits(address _account) internal view virtual override returns (uint256 units) {
+        return userVotingPower[delegates(_account)];
     }
 
     /**
@@ -309,16 +302,7 @@ contract JB721StakingDelegate is
      * @param _delegatee The account to delegate tier voting units to.
      */
     function _delegateTier(address _account, address _delegatee) internal virtual {
-        // Get the current delegatee
-        address _oldDelegate = _tierDelegation[_account];
-
-        // Store the new delegatee
-        _tierDelegation[_account] = _delegatee;
-
-        emit DelegateChanged(_account, _oldDelegate, _delegatee);
-
-        // Transfer the voting units.
-        _transferVotingUnits(_oldDelegate, _delegatee, _getTierVotingUnits(_account));
+        _delegate(_account, _delegatee);
     }
 
     /**
@@ -406,18 +390,7 @@ contract JB721StakingDelegate is
         return (redemptionWeightOf(_decodedTokenIds, _data), _data.memo, delegateAllocations);
     }
 
-    /**
-     * @notice
-     * The voting units for an account from its NFTs across all tiers. NFTs have a tier-specific preset number of voting
-     * units.
-     *
-     * @param _account The account to get voting units for.
-     *
-     * @return units The voting units for the account.
-     */
-    function _getVotingUnits(address _account) internal view virtual override returns (uint256 units) {
-        return userVotingPower[_account];
-    }
+
 
     /**
      * @notice
@@ -450,7 +423,7 @@ contract JB721StakingDelegate is
             }
 
            // Get a reference to the old delegate.
-            address _oldDelegate = _tierDelegation[_beneficiary];
+            address _oldDelegate = delegates(_beneficiary);
 
             // If there's either a new delegate or old delegate, increase the delegate weight.
             if (_votingDelegate != address(0)) {
@@ -502,7 +475,7 @@ contract JB721StakingDelegate is
             }
 
             // Get a reference to the old delegate.
-            address _oldDelegate = _tierDelegation[_beneficiary];
+            address _oldDelegate = delegates(_beneficiary);
 
             // If there's either a new delegate or old delegate, increase the delegate weight.
             if (_votingDelegate != address(0)) {
@@ -599,14 +572,14 @@ contract JB721StakingDelegate is
      */
     function _afterTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override {
         uint256 _stakingValue = stakingTokenBalance[_tokenId];
-        address _fromDelegate = _tierDelegation[_from];
-        address _toDelegate = _tierDelegation[_to];
+        address _fromDelegate = delegates(_from);
+        address _toDelegate = delegates(_to);
 
         if (_from != address(0)) userVotingPower[_fromDelegate] -= _stakingValue;
         if (_to != address(0)) userVotingPower[_toDelegate] += _stakingValue;
 
         // Transfer the voting units.
-        _transferVotingUnits(_fromDelegate, _toDelegate, _stakingValue);
+        _transferVotingUnits(_from, _to, _stakingValue);
 
         super._afterTokenTransfer(_from, _to, _tokenId);
     }
