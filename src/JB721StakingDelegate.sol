@@ -6,7 +6,6 @@ import "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
-import "@openzeppelin/contracts/utils/Checkpoints.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IJB721StakingDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegate.sol";
