@@ -403,9 +403,9 @@ contract DelegateTest_Unit is DSTestFull {
         view
         returns (JBDidPayData memory)
     {
-        // (bytes32, bytes32, bytes4, bool, JB721StakingTier[])
+        // (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[])
         bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _tiers);
+            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _beneficiary, _tiers);
 
         return JBDidPayData({
             payer: _payer,
@@ -449,9 +449,9 @@ contract DelegateTest_Unit is DSTestFull {
         view
         returns (JBDidPayData memory)
     {
-        // (bytes32, bytes32, bytes4, bool, JB721StakingTier[])
+        // (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[])
         bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJBTiered721Delegate).interfaceId, false, _tierIds);
+            abi.encode(bytes32(0), bytes32(0), type(IJBTiered721Delegate).interfaceId, false, _beneficiary, _tierIds);
 
         return JBDidPayData({
             payer: _payer,

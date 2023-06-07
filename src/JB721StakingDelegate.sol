@@ -291,7 +291,7 @@ contract JB721StakingDelegate is
      * @return units The voting units for the account.
      */
     function _getVotingUnits(address _account) internal view virtual override returns (uint256 units) {
-        return userVotingPower[delegates(_account)];
+        return userVotingPower[_account];
     }
 
     /**
@@ -572,11 +572,9 @@ contract JB721StakingDelegate is
      */
     function _afterTokenTransfer(address _from, address _to, uint256 _tokenId) internal virtual override {
         uint256 _stakingValue = stakingTokenBalance[_tokenId];
-        address _fromDelegate = delegates(_from);
-        address _toDelegate = delegates(_to);
 
-        if (_from != address(0)) userVotingPower[_fromDelegate] -= _stakingValue;
-        if (_to != address(0)) userVotingPower[_toDelegate] += _stakingValue;
+        if (_from != address(0)) userVotingPower[_from] -= _stakingValue;
+        if (_to != address(0)) userVotingPower[_to] += _stakingValue;
 
         // Transfer the voting units.
         _transferVotingUnits(_from, _to, _stakingValue);
