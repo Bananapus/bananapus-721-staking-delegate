@@ -421,15 +421,9 @@ contract JB721StakingDelegate is
                 _leftoverAmount -= _tierMinAmount;
             }
 
-           // Get a reference to the old delegate.
-            address _oldDelegate = delegates(_beneficiary);
-
             // If there's either a new delegate or old delegate, increase the delegate weight.
             if (_votingDelegate != address(0)) {
                 _delegateTier(_beneficiary, _votingDelegate);
-            } else if (_oldDelegate == address(0)) {
-                // if no _votingDelegate provided in metadata & when minting a tier for the first time by default _beneficiary will be the voting delegate
-                _delegateTier(_beneficiary, _beneficiary);
             }
 
             _mintTier(_tierId, _tierMinAmount, _beneficiary);
@@ -473,15 +467,9 @@ contract JB721StakingDelegate is
                 _leftoverAmount -= _tiers[_i].amount;
             }
 
-            // Get a reference to the old delegate.
-            address _oldDelegate = delegates(_beneficiary);
-
             // If there's either a new delegate or old delegate, increase the delegate weight.
             if (_votingDelegate != address(0)) {
                 _delegateTier(_beneficiary, _votingDelegate);
-            } else if (_oldDelegate == address(0)) {
-                // if no _votingDelegate provided in metadata & when minting a tier for the first time by default _beneficiary will be the voting delegate
-                _delegateTier(_beneficiary, _beneficiary);
             }
 
             _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
