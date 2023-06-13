@@ -8,9 +8,13 @@ import "../src/JB721StakingDelegate.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 
 contract DelegateTest_Unit is DSTestFull {
+    using stdStorage for StdStorage;
+
     error INSUFFICIENT_VALUE();
     error OVERSPENDING();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
+
+    StdStorage internal stdstore;
 
     uint256 _projectId = 103;
 
@@ -202,6 +206,7 @@ contract DelegateTest_Unit is DSTestFull {
         assertEq(_delegate.getVotes(_beneficiary), _votingPowerPreMint + _stakingAmount);
     }
 
+    /// This checks that the user themselves does not get the votingPower if their voting power is delegated to some other address
     function testMint_beneficiaryDoesNotReceiveVotingPowerWhenNotDelegated(
         address _beneficiary,
         uint16 _tierId,
@@ -286,6 +291,12 @@ contract DelegateTest_Unit is DSTestFull {
         vm.assume(type(uint224).max - _userDelegateVotingPowerBefore > _token.amount);
         vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore > _token.amount);
         vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore > _userDelegateVotingPowerBefore);
+        vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore - _token.amount > _userDelegateVotingPowerBefore);
+
+        // We exclude the scenario where both users delegate to the same address, since that complicates this test
+        vm.assume(_userDelegate != _recipientDelegate);
+        vm.assume(_user != _recipient && _user != _recipient);
+
         // Can't mint or transfer to the zero address
         vm.assume(_user != address(0) && _recipient != address(0));
 
@@ -376,24 +387,18 @@ contract DelegateTest_Unit is DSTestFull {
         address _beneficiary,
         uint224 _votingPowerAmount
     ) internal {
-        // Get a new random address that will delegate to the beneficiary
-        address _delegatee = _newAddress();
-
-        vm.prank(_delegatee);
-        _delegate.delegate(_beneficiary);
-
-        uint256 _votingPowerBefore = _delegate.getVotes(_beneficiary);
-
-        _delegate.ForTest_mintTo(type(uint16).max, _votingPowerAmount, _delegatee);
-
         // If the user has 'delegated' to the zero address this means that their voting power is inactive,
         // The zero address should never have any voting power
         if (_beneficiary == address(0)) return;
+        uint256 _currentVotes = _delegate.getVotes(_beneficiary);
+
+        // Transfer voting units from the zero address to the user 
+        _delegate.ForTest_transferVotingUnits(address(0), _beneficiary, _votingPowerAmount);
 
         // Assert that the voting power was received
         assertEq(
             _delegate.getVotes(_beneficiary),
-            _votingPowerAmount + _votingPowerBefore,
+            _currentVotes + _votingPowerAmount,
             "Beneficiary of delegated tokens did not receive the voting power"
         );
     }
@@ -474,5 +479,21 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         returns (uint256 _tokenID)
     {
         return _mintTier(_tierId, _stakingAmountWorth, _beneficiary);
+    }
+
+    function ForTest_transferVotingUnits(address _from, address _to, uint224 _amount) external {
+        address _fromDelegateBefore = delegates(_from);
+        address _toDelegateBefore = delegates(_to);
+        
+        // Update the delegate to themselves
+        _delegate(_from, _from);
+        _delegate(_to, _to);
+
+        // Transfer the voting units
+        _transferVotingUnits(_from, _to, _amount);
+
+        // Return the delegates to the original
+        _delegate(_from, _fromDelegateBefore);
+        _delegate(_to, _toDelegateBefore);
     }
 }
