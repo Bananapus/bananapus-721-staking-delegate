@@ -22,6 +22,7 @@ contract JB721StakingDelegate is
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
+    error DELEGATION_NOT_ALLOWED();
     error INVALID_TOKEN();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
     error INSUFFICIENT_VALUE();
@@ -295,10 +296,10 @@ contract JB721StakingDelegate is
 
     /**
      * @notice
-     * Delegate all of `account`'s voting units for the specified tier to `delegatee`.
+     * Delegate all of `account`'s voting units to `delegatee`.
      *
-     * @param _account The account delegating tier voting units.
-     * @param _delegatee The account to delegate tier voting units to.
+     * @param _account The account delegating all voting units.
+     * @param _delegatee The account to delegate all voting units to.
      */
     function _delegateTier(address _account, address _delegatee) internal virtual {
         _delegate(_account, _delegatee);
@@ -332,6 +333,7 @@ contract JB721StakingDelegate is
                 // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
                 (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
+                if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
 
                 // Mint the specified tiers with the custom stake amount
                 _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
@@ -340,10 +342,10 @@ contract JB721StakingDelegate is
                 uint16[] memory _tierIdsToMint;
 
                 // Decode the metadata.
-                (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, uint16[]));
+                (,,,, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, uint16[]));
 
                 // Mint the specified tiers
-                _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
+                _leftoverAmount = _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
             }
         }
 
@@ -398,11 +400,10 @@ contract JB721StakingDelegate is
      * @param _value The value of the payment.
      * @param _tierIdsToMint The tier ids to mint.
      * @param _beneficiary The beneficiary of the mint.
-     * @param _votingDelegate The voting delegate address.
      *
      * @return _leftoverAmount The amount that is left over after the tiers were minted.
      */
-    function _mintTiers(uint256 _value, uint16[] memory _tierIdsToMint, address _beneficiary, address _votingDelegate)
+    function _mintTiers(uint256 _value, uint16[] memory _tierIdsToMint, address _beneficiary)
         internal
         returns (uint256 _leftoverAmount)
     {
@@ -419,11 +420,6 @@ contract JB721StakingDelegate is
 
             unchecked {
                 _leftoverAmount -= _tierMinAmount;
-            }
-
-            // If there's either a new delegate or old delegate, increase the delegate weight.
-            if (_votingDelegate != address(0)) {
-                _delegateTier(_beneficiary, _votingDelegate);
             }
 
             _mintTier(_tierId, _tierMinAmount, _beneficiary);
