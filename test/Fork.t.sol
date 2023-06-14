@@ -210,6 +210,64 @@ contract EmptyTest_Fork is Test {
         }
     }
 
+
+    // we use this local var so we can use `push` because we don't know the size of the array beforehand
+    uint256[] _tokenIds;
+
+    function testPayAndRedeem_defaultStakeAmount(uint8[] memory _tierIds) public {
+        address _payer = address(0x1337);
+
+        // Calculate the cost for the mint
+        uint256 _cost;
+        for(uint256 _i; _i < _tierIds.length;) {
+            // TODO: for now this is a hardcoded price
+            vm.assume(_cost < type(uint224).max - 100 ether);
+            _cost += 100 ether;
+
+            unchecked {
+                ++_i;
+            }
+        }
+
+        _mintTokens(_payer, _cost);
+
+        // Give allowance to the staking terminal
+        vm.startPrank(_payer);
+        stakingToken.approve(address(stakingTerminal), _cost);
+
+        // Encode the metadata
+        bytes memory _metadata = abi.encode(bytes32(0), bytes32(0), type(IJBTiered721Delegate).interfaceId, false, _tierIds);
+
+        // Perform the pay (aka. stake the tokens)
+        stakingTerminal.pay(projectId, _cost, address(stakingToken), _payer, 0, false, string(""), _metadata);
+
+        // The tokens should be transferred from the user
+        assertEq(stakingToken.balanceOf(_payer), 0);
+        // The terminal should have the staking tokens
+        assertEq(stakingToken.balanceOf(address(stakingTerminal)), _cost);
+        // Check that the user received the voting power 1:1 of the staked amount
+        assertEq(delegate.userVotingPower(_payer), _cost);
+
+        // We have to check every tier to see what the exact tokenIds are
+        for(uint256 _tierId; _tierId < 256; _tierId++) {
+            // Get the number minted for the tier
+            uint256 _nMinted = delegate.numberOfTokensMintedOfTier(_tierId);
+            // Append all the ids to the array so we can redeem them
+            for(uint256 _j = 1; _j <= _nMinted; _j++) {
+                _tokenIds.push( _tierId * 1_000_000_000 + _j );
+            }
+        }
+
+        // Build the redemption metadata
+        bytes memory _redemptionMetadata = abi.encode(bytes32(0), type(IJB721Delegate).interfaceId, _tokenIds);
+
+        vm.prank(_payer);
+        stakingTerminal.redeemTokensOf(_payer, projectId, 0, address(stakingToken), 0, payable(_payer), "", _redemptionMetadata);
+
+        // Assert that the user received their staked tokens
+        assertEq(stakingToken.balanceOf(_payer), _cost);
+    }
+
     // Helpers
     function _mintTokens(address _to, uint256 _amount) internal {
         IJBToken _stakingToken = IJBToken(address(stakingToken));

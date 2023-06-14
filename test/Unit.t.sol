@@ -42,6 +42,7 @@ contract DelegateTest_Unit is DSTestFull {
         uint16 _tierId,
         uint96 _customAdditionalStakeAmount
     ) public {
+        vm.assume(_payer != address(0));
         vm.assume(_customAdditionalStakeAmount < type(uint128).max - 100 ether);
 
         uint128 _value = 100 ether + uint128(_customAdditionalStakeAmount);
@@ -66,6 +67,7 @@ contract DelegateTest_Unit is DSTestFull {
      function testMint_customStakeAmount_reverts_tierStakeTooSmall(address _payer, uint16 _tierId, uint128 _tierStakeAmount) public {
         uint128 _tierCost = 100 ether;
 
+        vm.assume(_payer != address(0));
         vm.assume(_tierStakeAmount < _tierCost);
         
         JB721StakingDelegate _delegate = _deployDelegate();
@@ -84,6 +86,7 @@ contract DelegateTest_Unit is DSTestFull {
     function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
         uint128 _tierCost = 100 ether;
 
+        vm.assume(_payer != address(0));
         vm.assume(_paymentAmount < _tierCost);
         
         JB721StakingDelegate _delegate = _deployDelegate();
@@ -103,6 +106,7 @@ contract DelegateTest_Unit is DSTestFull {
     function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
         uint128 _tierCost = 100 ether;
 
+        vm.assume(_payer != address(0));
         vm.assume(_paymentAmount > _tierCost);
         
         JB721StakingDelegate _delegate = _deployDelegate();
@@ -145,6 +149,7 @@ contract DelegateTest_Unit is DSTestFull {
 
         vm.assume(_paymentAmount < _tierCost);
         vm.assume(_beneficiary != address(0));
+        vm.assume(_payer != address(0));
         
         JB721StakingDelegate _delegate = _deployDelegate();
 
@@ -162,6 +167,7 @@ contract DelegateTest_Unit is DSTestFull {
 
         vm.assume(_paymentAmount > _tierCost);
         vm.assume(_beneficiary != address(0));
+        vm.assume(_payer != address(0));
         
         JB721StakingDelegate _delegate = _deployDelegate();
 
