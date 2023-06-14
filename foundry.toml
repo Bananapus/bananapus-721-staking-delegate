@@ -7,6 +7,9 @@ verbosity = 3 # display errors
 match_contract = "Unit" # only runs unit tests by default
 sizes = true
 
+[fuzz]
+runs = 1000
+
 [profile.CI] # run via FOUNDRY_PROFILE=CI foundry test
 fs_permissions = [{ access = "read", path = "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet"}] # Get the deployment addresses for forking
 match_contract = "Unit || Fork" 

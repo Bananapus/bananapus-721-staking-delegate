@@ -296,17 +296,6 @@ contract JB721StakingDelegate is
 
     /**
      * @notice
-     * Delegate all of `account`'s voting units to `delegatee`.
-     *
-     * @param _account The account delegating all voting units.
-     * @param _delegatee The account to delegate all voting units to.
-     */
-    function _delegateTier(address _account, address _delegatee) internal virtual {
-        _delegate(_account, _delegatee);
-    }
-
-    /**
-     * @notice
      * Process a received payment.
      *
      * @param _data The Juicebox standard project payment data.
@@ -463,16 +452,16 @@ contract JB721StakingDelegate is
                 _leftoverAmount -= _tiers[_i].amount;
             }
 
-            // If there's either a new delegate or old delegate, increase the delegate weight.
-            if (_votingDelegate != address(0)) {
-                _delegateTier(_beneficiary, _votingDelegate);
-            }
-
             _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
 
             unchecked {
                 ++_i;
             }
+        }
+
+        // If there's either a new delegate or old delegate, increase the delegate weight.
+        if (_votingDelegate != address(0)) {
+            _delegate(_beneficiary, _votingDelegate);
         }
     }
 
