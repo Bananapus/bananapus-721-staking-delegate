@@ -39,11 +39,9 @@ contract DelegateTest_Unit is DSTestFull {
 
     function testMint_customStakeAmount(
         address _payer,
-        address _beneficiary,
         uint16 _tierId,
         uint96 _customAdditionalStakeAmount
     ) public {
-        vm.assume(_beneficiary != address(0));
         vm.assume(_customAdditionalStakeAmount < type(uint128).max - 100 ether);
 
         uint128 _value = 100 ether + uint128(_customAdditionalStakeAmount);
@@ -56,7 +54,7 @@ contract DelegateTest_Unit is DSTestFull {
         uint256 _expectedTokenId = _generateTokenId(_tierId, _numberMintedBefore + 1);
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _value, _beneficiary, _tiers));
+        _delegate.didPay(_buildPayData(_payer, _value, _payer, _tiers));
 
         // Check that the correct tier was minted
         assertEq(_delegate.numberOfTokensMintedOfTier(_tierId), _numberMintedBefore + 1);
@@ -65,11 +63,10 @@ contract DelegateTest_Unit is DSTestFull {
         assertEq(_delegate.stakingTokenBalance(_expectedTokenId), _value);
     }
 
-     function testMint_customStakeAmount_reverts_tierStakeTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint128 _tierStakeAmount) public {
+     function testMint_customStakeAmount_reverts_tierStakeTooSmall(address _payer, uint16 _tierId, uint128 _tierStakeAmount) public {
         uint128 _tierCost = 100 ether;
 
         vm.assume(_tierStakeAmount < _tierCost);
-        vm.assume(_beneficiary != address(0));
         
         JB721StakingDelegate _delegate = _deployDelegate();
 
@@ -81,14 +78,13 @@ contract DelegateTest_Unit is DSTestFull {
         vm.expectRevert(abi.encodeWithSelector(STAKE_NOT_ENOUGH_FOR_TIER.selector, _tierId, _tierCost, _tierStakeAmount));
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _tierCost, _beneficiary, _tiers));
+        _delegate.didPay(_buildPayData(_payer, _tierCost, _payer, _tiers));
     }
 
-    function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint128 _paymentAmount) public {
+    function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
         uint128 _tierCost = 100 ether;
 
         vm.assume(_paymentAmount < _tierCost);
-        vm.assume(_beneficiary != address(0));
         
         JB721StakingDelegate _delegate = _deployDelegate();
 
@@ -100,15 +96,14 @@ contract DelegateTest_Unit is DSTestFull {
         vm.expectRevert(INSUFFICIENT_VALUE.selector);
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tiers));
+        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _payer, _tiers));
     }
 
 
-    function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, address _beneficiary, uint16 _tierId, uint128 _paymentAmount) public {
+    function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
         uint128 _tierCost = 100 ether;
 
         vm.assume(_paymentAmount > _tierCost);
-        vm.assume(_beneficiary != address(0));
         
         JB721StakingDelegate _delegate = _deployDelegate();
 
@@ -120,7 +115,7 @@ contract DelegateTest_Unit is DSTestFull {
         vm.expectRevert(OVERSPENDING.selector);
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tiers));
+        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _payer, _tiers));
     }
 
     function testMint_defaultStakeAmount(address _payer, address _beneficiary, uint16 _tierId) public {
@@ -408,9 +403,9 @@ contract DelegateTest_Unit is DSTestFull {
         view
         returns (JBDidPayData memory)
     {
-        // (bytes32, bytes32, bytes4, bool, JB721StakingTier[])
+        // (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[])
         bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _tiers);
+            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _beneficiary, _tiers);
 
         return JBDidPayData({
             payer: _payer,

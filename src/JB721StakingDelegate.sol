@@ -22,6 +22,7 @@ contract JB721StakingDelegate is
     //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
+    error DELEGATION_NOT_ALLOWED();
     error INVALID_TOKEN();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
     error INSUFFICIENT_VALUE();
@@ -282,6 +283,19 @@ contract JB721StakingDelegate is
 
     /**
      * @notice
+     * The voting units for an account from its NFTs across all tiers. NFTs have a tier-specific preset number of voting
+     * units.
+     *
+     * @param _account The account to get voting units for.
+     *
+     * @return units The voting units for the account.
+     */
+    function _getVotingUnits(address _account) internal view virtual override returns (uint256 units) {
+        return userVotingPower[_account];
+    }
+
+    /**
+     * @notice
      * Process a received payment.
      *
      * @param _data The Juicebox standard project payment data.
@@ -294,6 +308,9 @@ contract JB721StakingDelegate is
 
         uint256 _leftoverAmount = _data.amount.value;
 
+        // Keep a reference to the address that should be given attestation votes from this mint.
+        address _votingDelegate;
+
         // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
         // Skip another 32 bytes reserved for generic extension parameters.
         // Check the 4 bytes interfaceId to verify the metadata is intended for this contract.
@@ -304,10 +321,11 @@ contract JB721StakingDelegate is
 
                 // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
-                (,,,, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, JB721StakingTier[]));
+                (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
+                if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
 
                 // Mint the specified tiers with the custom stake amount
-                _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary);
+                _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
             } else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
@@ -362,18 +380,7 @@ contract JB721StakingDelegate is
         return (redemptionWeightOf(_decodedTokenIds, _data), _data.memo, delegateAllocations);
     }
 
-    /**
-     * @notice
-     * The voting units for an account from its NFTs across all tiers. NFTs have a tier-specific preset number of voting
-     * units.
-     *
-     * @param _account The account to get voting units for.
-     *
-     * @return units The voting units for the account.
-     */
-    function _getVotingUnits(address _account) internal view virtual override returns (uint256 units) {
-        return userVotingPower[_account];
-    }
+
 
     /**
      * @notice
@@ -419,10 +426,11 @@ contract JB721StakingDelegate is
      * @param _value The payment value.
      * @param _tiers The tiers and stake amount to be minted.
      * @param _beneficiary The beneficiary of the mint.
+     * @param _votingDelegate The voting delegate address.
      *
      * @return _leftoverAmount The amount that is left over after the tiers were minted.
      */
-    function _mintTiersWithCustomAmount(uint256 _value, JB721StakingTier[] memory _tiers, address _beneficiary)
+    function _mintTiersWithCustomAmount(uint256 _value, JB721StakingTier[] memory _tiers, address _beneficiary, address _votingDelegate)
         internal
         returns (uint256 _leftoverAmount)
     {
@@ -449,6 +457,11 @@ contract JB721StakingDelegate is
             unchecked {
                 ++_i;
             }
+        }
+
+        // If there's either a new delegate or old delegate, increase the delegate weight.
+        if (_votingDelegate != address(0)) {
+            _delegate(_beneficiary, _votingDelegate);
         }
     }
 
