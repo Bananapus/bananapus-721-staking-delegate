@@ -136,39 +136,78 @@ contract EmptyTest_Fork is Test {
         );
     }
 
-    // Test that a pay does not revert
-    function testPay() public {
+
+
+
+    function testPay_defaultStakeAmount(uint16[] memory _tierIds) public {
+        // Calculate the cost for the mint
+        uint256 _cost;
+        for(uint256 _i; _i < _tierIds.length;) {
+            // TODO: for now this is a hardcoded price
+            vm.assume(_cost < type(uint224).max - 100 ether);
+            _cost += 100 ether;
+
+            unchecked {
+                ++_i;
+            }
+        }
+
         address _payer = address(0x1337);
-        _mintTokens(_payer, 1000);
+        _mintTokens(_payer, _cost);
 
         // Give allowance to the staking terminal
         vm.startPrank(_payer);
-        stakingToken.approve(address(stakingTerminal), 1000);
+        stakingToken.approve(address(stakingTerminal), _cost);
+
+        // Encode the metadata
+        bytes memory _metadata = abi.encode(bytes32(0), bytes32(0), type(IJBTiered721Delegate).interfaceId, false, _tierIds);
 
         // Perform the pay (aka. stake the tokens)
-        stakingTerminal.pay(projectId, 1000, address(stakingToken), _payer, 0, false, string(""), bytes(""));
+        stakingTerminal.pay(projectId, _cost, address(stakingToken), _payer, 0, false, string(""), _metadata);
 
-        // Balance should be 0
+        // The tokens should be transferred from the user
         assertEq(stakingToken.balanceOf(_payer), 0);
+        // The terminal should have the staking tokens
+        assertEq(stakingToken.balanceOf(address(stakingTerminal)), _cost);
+        // Check that the user received the voting power 1:1 of the staked amount
+        assertEq(delegate.userVotingPower(_payer), _cost);
     }
 
-    // Test that a pay does not revert
-    function testPayMintsNFT() public {
+    function testPay_customStakeAmount(uint16 _tierId, uint128 _customAdditionalStakeAmount, address _delegatingTo) public {
+        // Calculate the cost for the mint
+        vm.assume(_customAdditionalStakeAmount < type(uint128).max - 100 ether);
+        uint128 _cost = 100 ether + uint128(_customAdditionalStakeAmount);
+
+        JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
+        _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _cost});
+  
         address _payer = address(0x1337);
-        _mintTokens(_payer, 1000);
+        _mintTokens(_payer, _cost);
 
         // Give allowance to the staking terminal
         vm.startPrank(_payer);
-        stakingToken.approve(address(stakingTerminal), 1000);
+        stakingToken.approve(address(stakingTerminal), _cost);
+
+        // Encode the metadata
+        bytes memory _metadata =
+            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _delegatingTo, _tiers);
 
         // Perform the pay (aka. stake the tokens)
-        stakingTerminal.pay(projectId, 1000, address(stakingToken), _payer, 0, false, string(""), bytes(""));
+        stakingTerminal.pay(projectId, _cost, address(stakingToken), _payer, 0, false, string(""), _metadata);
 
-        // There should now be a single token minted
-        // assertEq(
-        //     delegate.numberOfTokensMinted(),
-        //     1
-        // );
+        // The tokens should be transferred from the user
+        assertEq(stakingToken.balanceOf(_payer), 0);
+        // The terminal should have the staking tokens
+        assertEq(stakingToken.balanceOf(address(stakingTerminal)), _cost);
+        // Check that the user received the voting power 1:1 of the staked amount
+        assertEq(delegate.userVotingPower(_payer), _cost);
+        // Assert that the voting power was delegated to the delegate recipient
+        assertEq(delegate.delegates(_payer), _delegatingTo);
+        // Voting power is not delegatable to the zero address
+        if(_delegatingTo != address(0)) {
+            // Assert that they received the voting power
+            assertEq(delegate.getVotes(_delegatingTo), _cost);
+        }
     }
 
     // Helpers
