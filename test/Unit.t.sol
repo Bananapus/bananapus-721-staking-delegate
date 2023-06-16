@@ -7,14 +7,12 @@ import "./utils/DSTestFull.sol";
 import "../src/JB721StakingDelegate.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 
-contract DelegateTest_Unit is DSTestFull {
+contract DelegateTest_Unit is Test {
     using stdStorage for StdStorage;
 
     error INSUFFICIENT_VALUE();
     error OVERSPENDING();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
-
-    StdStorage internal stdstore;
 
     uint256 _projectId = 103;
 
@@ -43,11 +41,13 @@ contract DelegateTest_Unit is DSTestFull {
         uint96 _customAdditionalStakeAmount
     ) public {
         vm.assume(_payer != address(0));
-        vm.assume(_customAdditionalStakeAmount < type(uint128).max - 100 ether);
-
-        uint128 _value = 100 ether + uint128(_customAdditionalStakeAmount);
+        
         JB721StakingDelegate _delegate = _deployDelegate();
+        uint128 _value = uint128(_validateTierAndGetCost(_delegate, _tierId));
 
+        // Check that we won't overflow if we add the _customAdditionalStakeAmount
+        vm.assume(_customAdditionalStakeAmount < type(uint128).max - _value);
+        
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _value});
 
@@ -65,13 +65,14 @@ contract DelegateTest_Unit is DSTestFull {
     }
 
      function testMint_customStakeAmount_reverts_tierStakeTooSmall(address _payer, uint16 _tierId, uint128 _tierStakeAmount) public {
-        uint128 _tierCost = 100 ether;
-
         vm.assume(_payer != address(0));
-        vm.assume(_tierStakeAmount < _tierCost);
         
         JB721StakingDelegate _delegate = _deployDelegate();
 
+        // Make sure that the amount we are going to send is not enough for the tier
+        uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
+        vm.assume(_tierStakeAmount < _tierCost);
+        
         // Here we specify the incorrect amount, this is not enough stake for this tier
         // However in the actual payment we do pay enought to mint this tier
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
@@ -84,12 +85,13 @@ contract DelegateTest_Unit is DSTestFull {
     }
 
     function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
-        uint128 _tierCost = 100 ether;
-
         vm.assume(_payer != address(0));
-        vm.assume(_paymentAmount < _tierCost);
         
         JB721StakingDelegate _delegate = _deployDelegate();
+
+        // Make sure that the amount we are going to send is not enough for the tier
+        uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
+        _paymentAmount = uint128(bound(_paymentAmount, 0, _tierCost));
 
         // Here we specify the (correct) expected amount
         // However in the actual payment we do not pay enought to mint this
@@ -104,12 +106,12 @@ contract DelegateTest_Unit is DSTestFull {
 
 
     function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
-        uint128 _tierCost = 100 ether;
-
         vm.assume(_payer != address(0));
-        vm.assume(_paymentAmount > _tierCost);
-        
+
         JB721StakingDelegate _delegate = _deployDelegate();
+        
+        uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
+        _paymentAmount = uint128(bound(_paymentAmount, _tierCost + 1, type(uint128).max));
 
         // Here we specify the (correct) expected amount
         // However in the actual payment we do not pay enought to mint this
@@ -125,8 +127,8 @@ contract DelegateTest_Unit is DSTestFull {
     function testMint_defaultStakeAmount(address _payer, address _beneficiary, uint16 _tierId) public {
         vm.assume(_beneficiary != address(0));
 
-        uint128 _value = 100 ether;
         JB721StakingDelegate _delegate = _deployDelegate();
+        uint128 _value = uint128(_validateTierAndGetCost(_delegate, _tierId));
 
         uint16[] memory _tierIds = new uint16[](1);
         _tierIds[0] = _tierId;
@@ -145,13 +147,15 @@ contract DelegateTest_Unit is DSTestFull {
     }
 
     function testMint_defaultStakeAmount_reverts_paymentTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint224 _paymentAmount) public {
-        uint128 _tierCost = 100 ether;
-
-        vm.assume(_paymentAmount < _tierCost);
         vm.assume(_beneficiary != address(0));
         vm.assume(_payer != address(0));
         
-        JB721StakingDelegate _delegate = _deployDelegate();
+         JB721StakingDelegate _delegate = _deployDelegate();
+
+        // Make sure that the amount we are going to send is not enough for the tier
+        uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
+        _paymentAmount = uint128(bound(_paymentAmount, 0, _tierCost - 1));
+        // vm.assume(_paymentAmount < _tierCost);
 
         uint16[] memory _tierIds = new uint16[](1);
         _tierIds[0] = _tierId;
@@ -163,13 +167,13 @@ contract DelegateTest_Unit is DSTestFull {
     }
 
     function testMint_defaultStakeAmount_reverts_paymentTooBig(address _payer, address _beneficiary, uint16 _tierId, uint224 _paymentAmount) public {
-        uint128 _tierCost = 100 ether;
-
-        vm.assume(_paymentAmount > _tierCost);
         vm.assume(_beneficiary != address(0));
         vm.assume(_payer != address(0));
-        
+
         JB721StakingDelegate _delegate = _deployDelegate();
+
+        uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
+        _paymentAmount = uint128(bound(_paymentAmount, _tierCost + 1, type(uint128).max));
 
         uint16[] memory _tierIds = new uint16[](1);
         _tierIds[0] = _tierId;
@@ -359,12 +363,28 @@ contract DelegateTest_Unit is DSTestFull {
         }
     }
 
+    // This test is intended to check the gas usage of the tier stake lookup
+    function testTiers_getCost(uint256 _tierIdSeed) public {
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        uint16 _tierId = uint16(bound(_tierIdSeed, 0, 59));
+        _delegate.ForTest_getCost(_tierId);
+    }
+
     //*********************************************************************//
     // ----------------------------- Helpers ----------------------------- //
     //*********************************************************************//
 
     function _generateTokenId(uint256 _tierId, uint256 _tokenNumber) internal pure returns (uint256) {
         return (_tierId * 1_000_000_000) + _tokenNumber;
+    }
+
+    function _validateTierAndGetCost(JB721StakingDelegate _delegate, uint16 _tierId) internal view returns (uint256 _cost) {
+        // ValidateTier
+        uint256 _maxTier = _delegate.maxTier();
+        vm.assume(_tierId <= _maxTier);
+
+        JB721Tier memory _tier = _delegate.tierOf(address(_delegate), _tierId, false);
+        return _tier.price;
     }
 
     function _deployDelegate() internal returns (JB721StakingDelegateHarness _delegate) {
@@ -472,6 +492,67 @@ contract DelegateTest_Unit is DSTestFull {
             metadata: _metadata
         });
     }
+
+     // Seed for the generation of pseudorandom addresses
+    bytes32 private _nextAddressSeed = keccak256(abi.encodePacked("address"));
+
+    /**
+     * @dev Creates a new pseudorandom address and labels it with the given label
+     * @param _name Name of the label.
+     * @return _address The address generated and labeled
+     */
+    function _label(string memory _name) internal returns (address _address) {
+        return _label(_newAddress(), _name);
+    }
+
+    /**
+     * @dev Labels the given address and returns it
+     *
+     * @param _addy Address to label.
+     * @param _name Name of the label.
+     *
+     * @return _address The address Labeled address
+     */
+    function _label(address _addy, string memory _name) internal returns (address _address) {
+        vm.label(_addy, _name);
+        return _addy;
+    }
+
+    /**
+     * @dev Creates a mock contract in a pseudorandom address and labels it.
+     * @param _name Label for the mock contract.
+     * @return _address The address of the mock contract.
+     */
+    function _mockContract(string memory _name) internal returns (address _address) {
+        return _mockContract(_newAddress(), _name);
+    }
+
+    /**
+     * @dev Creates a mock contract in a specified address and labels it.
+     *
+     * @param _addy Address for the mock contract.
+     * @param _name Label for the mock contract.
+     *
+     * @return _address The address of the mock contract.
+     */
+    function _mockContract(address _addy, string memory _name) internal returns (address _address) {
+        vm.etch(_addy, new bytes(0x1));
+        return _label(_addy, _name);
+    }
+
+    /**
+     * @dev Creates a pseudorandom address.
+     * @return _address The address of the mock contract.
+     */
+    function _newAddress() internal returns (address _address) {
+        address payable _nextAddress = payable(address(uint160(uint256(_nextAddressSeed))));
+        _nextAddressSeed = keccak256(abi.encodePacked(_nextAddressSeed));
+        _address = _nextAddress;
+    }
+
+    function _expectEmitNoIndex() internal {
+        vm.expectEmit(false, false, false, true);
+    }
 }
 
 contract JB721StakingDelegateHarness is JB721StakingDelegate {
@@ -496,5 +577,9 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         // Return the delegates to the original
         _delegate(_from, _fromDelegateBefore);
         _delegate(_to, _toDelegateBefore);
+    }
+
+    function ForTest_getCost(uint16 _tierId) external view returns (uint256 _minStake){
+        return _getTierMinStake(_tierId);
     }
 }

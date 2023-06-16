@@ -24,6 +24,7 @@ contract JB721StakingDelegate is
     //*********************************************************************//
     error DELEGATION_NOT_ALLOWED();
     error INVALID_TOKEN();
+    error INVALID_TIER();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
     error INSUFFICIENT_VALUE();
     error OVERSPENDING();
@@ -89,6 +90,9 @@ contract JB721StakingDelegate is
      *
      */
     bytes32 public encodedIPFSUri;
+
+    uint256 public maxTier = 59;
+    uint256 public tierMultiplier = (10 ** 18);
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -251,6 +255,11 @@ contract JB721StakingDelegate is
         encodedIPFSUri = _encodedIPFSUri;
 
         baseURI = _baseURI;
+
+        // TODO: non-hardcode
+        maxTier = 59;
+        tierMultiplier = (10 ** 18);
+        
 
         // Initialize the superclass.
         JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
@@ -499,12 +508,73 @@ contract JB721StakingDelegate is
      *
      * @return _minStakeAmount The minimum required stake.
      */
-    function _getTierMinStake(uint16 _tier) internal pure returns (uint256 _minStakeAmount) {
-        _tier;
-        // TODO: Implement
+    function _getTierMinStake(uint16 _tier) internal view returns (uint256 _minStakeAmount) {
+        return _getTierBaseAmount(_tier) * tierMultiplier;
+    }
 
-        // Has to revert of the tier does not exist
-        return 100 ether;
+    /**
+     * @notice 
+     * Get the base minimum amount for each tier, as specified by the veJBX tier ranges
+     * @param _tierId the id to get the minimum amount for
+     * @return _baseAmount the minimum token amount for the tier, pre-multiplied
+     */
+    function _getTierBaseAmount(uint256 _tierId) internal view returns (uint256 _baseAmount) {
+        // Make sure the tier is an existing tier
+        if (_tierId > maxTier) revert INVALID_TIER();
+        // To make it easier to compare these tiers to the doc we increase the tier by 1
+        // https://www.notion.so/veBanny-proposal-from-Jango-2-68c6f578bef84205a9f87e3f1057aa37
+        unchecked {
+            _tierId = _tierId + 1;
+        }
+
+        if (_tierId <= 10) {
+            // 1-10
+            if(_tierId == 1){
+                return 1;
+            }
+            return _tierId * 100 - 100;
+        }
+
+        if (_tierId <= 20) {
+            // 11-20
+            return (_tierId - 10) * 1_000;
+        }
+
+        if (_tierId <= 30) {
+            // 20-30
+            return (_tierId - 20) * 2_000 + 10_000; 
+        }
+
+        if (_tierId <= 37) {
+            // 30-37
+            return (_tierId - 27) * 10_000; 
+        }
+
+        if (_tierId <= 46) {
+            // 37-46
+            return (_tierId - 36) * 100_000;
+        }
+
+        if (_tierId <= 55) {
+            // 56-55
+            return (_tierId - 45) * 1_000_000;
+        }
+
+        if (_tierId <= 58) {
+            // 56-58
+            return (_tierId - 55) * 10_000_000;
+        }
+
+        if (_tierId == 59) {
+            return 100_000_000;
+        }
+
+        if (_tierId == 60) {
+            return 600_000_000;
+        }
+
+        // Something went wrong if we haven't returned yet
+        assert(false);
     }
 
     /**
