@@ -42,13 +42,13 @@ contract JB721StakingDelegate is
      * @notice
      * The address of the singleton 'JB721StakingDelegate'
      */
-    address public immutable override codeOrigin;
+    // address public immutable override codeOrigin;
 
     /**
      * @notice
      * The staking token for this delegate, this is the only token that we accept in payments
      */
-    IERC20 public stakingToken;
+    IERC20 public immutable stakingToken;
 
     /**
      * @dev A mapping of staked token balances per id
@@ -69,7 +69,7 @@ contract JB721StakingDelegate is
      * @notice
      *   The contract that stores and manages the NFT's data.
      */
-    IJBTokenUriResolver public uriResolver;
+    IJBTokenUriResolver immutable public uriResolver;
 
     /**
      * @notice
@@ -89,10 +89,11 @@ contract JB721StakingDelegate is
      * encoded baseURI to be used when no token resolver provided
      *
      */
-    bytes32 public encodedIPFSUri;
+    bytes32 public immutable encodedIPFSUri;
 
-    uint256 public maxTier = 59;
-    uint256 public tierMultiplier = (10 ** 18);
+    uint256 public immutable maxTier;
+
+    uint256 public immutable tierMultiplier;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
@@ -225,11 +226,7 @@ contract JB721StakingDelegate is
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
-    constructor() {
-        codeOrigin = address(this);
-    }
-
-    function initialize(
+    constructor(
         uint256 _projectId,
         IERC20 _stakingToken,
         IJBDirectory _directory,
@@ -239,11 +236,7 @@ contract JB721StakingDelegate is
         string memory _contractURI,
         string memory _baseURI,
         bytes32 _encodedIPFSUri
-    ) external {
-        // Make the original un-initializable.
-        if (address(this) == codeOrigin) revert();
-
-        // Stop re-initialization.
+    ) {
         if (projectId != 0) revert();
 
         stakingToken = _stakingToken;
@@ -264,6 +257,42 @@ contract JB721StakingDelegate is
         // Initialize the superclass.
         JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
     }
+
+    // function initialize(
+    //     uint256 _projectId,
+    //     IERC20 _stakingToken,
+    //     IJBDirectory _directory,
+    //     IJBTokenUriResolver _uriResolver,
+    //     string memory _name,
+    //     string memory _symbol,
+    //     string memory _contractURI,
+    //     string memory _baseURI,
+    //     bytes32 _encodedIPFSUri
+    // ) external {
+    //     // Make the original un-initializable.
+    //     if (address(this) == codeOrigin) revert();
+
+    //     // Stop re-initialization.
+    //     if (projectId != 0) revert();
+
+    //     stakingToken = _stakingToken;
+
+    //     uriResolver = _uriResolver;
+
+    //     contractURI = _contractURI;
+
+    //     encodedIPFSUri = _encodedIPFSUri;
+
+    //     baseURI = _baseURI;
+
+    //     // TODO: non-hardcode
+    //     maxTier = 59;
+    //     tierMultiplier = (10 ** 18);
+        
+
+    //     // Initialize the superclass.
+    //     JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
+    // }
 
     /**
      * @notice

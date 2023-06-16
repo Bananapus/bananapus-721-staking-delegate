@@ -6,16 +6,6 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract JB721StakingDelegateDeployer {
     /**
-     * @notice
-     * The delegate implementation
-     */
-    JB721StakingDelegate public immutable delegateImplementation;
-
-    constructor(JB721StakingDelegate _delegateImplementation) {
-        delegateImplementation = _delegateImplementation;
-    }
-
-    /**
      * @notice deploy a staking delegate for a project
      *
      * @param _projectId the prooject to deploy it for
@@ -34,9 +24,7 @@ contract JB721StakingDelegateDeployer {
         string memory _baseURI,
         bytes32 _encodedIPFSUri
     ) external returns (JB721StakingDelegate newDelegate) {
-        newDelegate = JB721StakingDelegate(Clones.clone(address(delegateImplementation)));
-
-        newDelegate.initialize(
+        newDelegate = new JB721StakingDelegate(
             _projectId, _stakingToken, _directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri
         );
     }

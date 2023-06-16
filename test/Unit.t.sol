@@ -24,11 +24,8 @@ contract DelegateTest_Unit is Test {
     JB721StakingDelegateDeployer _deployer;
 
     function setUp() public {
-        // Deploy the delegate
-        JB721StakingDelegate _delegateImplementation = new JB721StakingDelegateHarness();
-
         // Deploy the deployer
-        _deployer = new JB721StakingDelegateDeployer(_delegateImplementation);
+        _deployer = new JB721StakingDelegateDeployer();
     }
 
     function testDeploy() public {
@@ -388,12 +385,8 @@ contract DelegateTest_Unit is Test {
     }
 
     function _deployDelegate() internal returns (JB721StakingDelegateHarness _delegate) {
-        _delegate = JB721StakingDelegateHarness(
-            address(
-                _deployer.deploy(
-                    _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0")
-                )
-            )
+        _delegate = new JB721StakingDelegateHarness(
+            _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0")
         );
 
         vm.mockCall(
@@ -556,6 +549,20 @@ contract DelegateTest_Unit is Test {
 }
 
 contract JB721StakingDelegateHarness is JB721StakingDelegate {
+     constructor(
+        uint256 _projectId,
+        IERC20 _stakingToken,
+        IJBDirectory _directory,
+        IJBTokenUriResolver _uriResolver,
+        string memory _name,
+        string memory _symbol,
+        string memory _contractURI,
+        string memory _baseURI,
+        bytes32 _encodedIPFSUri
+    ) JB721StakingDelegate(_projectId, _stakingToken, _directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri)
+    {}
+
+
     function ForTest_mintTo(uint16 _tierId, uint256 _stakingAmountWorth, address _beneficiary)
         external
         returns (uint256 _tokenID)

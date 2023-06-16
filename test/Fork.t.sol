@@ -68,9 +68,8 @@ contract EmptyTest_Fork is Test {
         projectId = JBProjects.count() + 1;
 
         // Deploy the deployer, with the implementation and then deploy a implementation clone
-        delegate = new JB721StakingDelegateDeployer(
-            new JB721StakingDelegate()
-        ).deploy(
+        delegate = new JB721StakingDelegateDeployer()
+        .deploy(
             projectId,
             stakingToken,
             JBDirectory,
