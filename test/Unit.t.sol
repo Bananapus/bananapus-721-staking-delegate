@@ -16,20 +16,35 @@ contract DelegateTest_Unit is Test {
 
     uint256 _projectId = 103;
 
-    IERC20 internal _stakingToken = IERC20(_mockContract("staking_token"));
+    IERC20Metadata internal _stakingToken = IERC20Metadata(_mockContract("staking_token"));
+    IJBController _controller = IJBController(_mockContract("jb_controller"));
     IJBDirectory _directory = IJBDirectory(_mockContract("jb_directory"));
     IJBPaymentTerminal _terminal = IJBPaymentTerminal(_mockContract("jb_payment_terminal"));
+    IJBSingleTokenPaymentTerminalStore _terminalStore =
+        IJBSingleTokenPaymentTerminalStore(_mockContract("jb_terminal_store"));
+    IJBSplitsStore _splitStore = IJBSplitsStore(_mockContract("jb_split_store"));
     IJBTokenUriResolver _resolver = IJBTokenUriResolver(_mockContract("jb_token_resolver"));
+    IJBOperatorStore _operatorStore = IJBOperatorStore(_mockContract("jb_operator_store"));
+    IJBProjects _projects = IJBProjects(_mockContract("jb_projects"));
+    JBERC20TerminalDeployer _terminalDeployer = JBERC20TerminalDeployer(_mockContract("jb_terminal_deployer"));
 
     JB721StakingDelegateDeployer _deployer;
 
     function setUp() public {
         // Deploy the deployer
-        _deployer = new JB721StakingDelegateDeployer();
+        _deployer = new JB721StakingDelegateDeployer(
+            _controller, 
+            _directory,
+            _projects,
+            _operatorStore,
+            _terminalStore,
+            _splitStore,
+            _terminalDeployer
+        );
     }
 
     function testDeploy() public {
-        _deployer.deploy(_projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0"));
+        _deployer.deployDelegate(_projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", "", bytes32("0"));
     }
 
     function testMint_customStakeAmount(address _payer, uint16 _tierId, uint96 _customAdditionalStakeAmount) public {

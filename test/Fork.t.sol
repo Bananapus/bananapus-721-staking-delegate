@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 
+import "../src/JBERC20TerminalDeployer.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 
 import "@jbx-protocol/juice-contracts-v3/contracts/JBERC20PaymentTerminal.sol";
@@ -28,7 +29,7 @@ contract EmptyTest_Fork is Test {
     address projectOwner = address(0x7331);
 
     uint256 projectId;
-    IERC20 stakingToken = IERC20(0x4554CC10898f92D45378b98D6D6c2dD54c687Fb2); // JBXV3
+    IERC20Metadata stakingToken = IERC20Metadata(0x4554CC10898f92D45378b98D6D6c2dD54c687Fb2); // JBXV3
 
     function setUp() public {
         vm.createSelectFork("https://rpc.ankr.com/eth"); // Will start on latest block by default
@@ -65,73 +66,26 @@ contract EmptyTest_Fork is Test {
         JBFundingCycleStore = JBController.fundingCycleStore();
         JBProjects = JBController.projects();
 
-        projectId = JBProjects.count() + 1;
+        JBERC20TerminalDeployer _terminalDeployer = new JBERC20TerminalDeployer();
 
-        // Deploy the deployer, with the implementation and then deploy a implementation clone
-        delegate = new JB721StakingDelegateDeployer()
-        .deploy(
-            projectId,
-            stakingToken,
+        // Deploy the deployer, and create a staking project
+        (projectId, stakingTerminal, delegate) = new JB721StakingDelegateDeployer(
+            JBController, 
             JBDirectory,
-            IJBTokenUriResolver(address(0)),
-            "JBXStake",
-            "STAKE",
-            "",
-            "",
-            bytes32('0')
-        );
-
-        // Deploy a new terminal for the project token
-        stakingTerminal = new JBERC20PaymentTerminal(
-            IERC20Metadata(address(stakingToken)),
-            JBCurrencies.ETH,
-            JBCurrencies.ETH,
-            0,
-            JBOperatable(address(JBDirectory)).operatorStore(),
             JBDirectory.projects(),
-            JBDirectory,
-            JBSplitsStore,
-            JBsingleTokenPaymentStore.prices(),
+            JBOperatable(address(JBDirectory)).operatorStore(),
             JBsingleTokenPaymentStore,
-            address(this)
-        );
-
-        IJBPaymentTerminal[] memory _terminals = new IJBPaymentTerminal[](1);
-        _terminals[0] = stakingTerminal;
-
-        projectId = JBController.launchProjectFor(
-            projectOwner,
-            JBProjectMetadata({content: "", domain: 0}),
-            JBFundingCycleData({duration: 0, weight: 0, discountRate: 0, ballot: IJBFundingCycleBallot(address(0))}),
-            JBFundingCycleMetadata({
-                global: JBGlobalFundingCycleMetadata({
-                    allowSetTerminals: true,
-                    allowSetController: false,
-                    pauseTransfers: false
-                }),
-                reservedRate: 0,
-                redemptionRate: 0,
-                ballotRedemptionRate: 0,
-                pausePay: false,
-                pauseDistributions: false,
-                pauseRedeem: false,
-                pauseBurn: false,
-                allowMinting: true,
-                allowTerminalMigration: false,
-                allowControllerMigration: false,
-                holdFees: false,
-                preferClaimedTokenOverride: false,
-                useTotalOverflowForRedemptions: false,
-                useDataSourceForPay: true,
-                useDataSourceForRedeem: true,
-                dataSource: address(delegate),
-                metadata: 0
-            }),
-            0,
-            new JBGroupedSplits[](0),
-            new JBFundAccessConstraints[](0),
-            _terminals,
-            ""
+            JBSplitsStore,
+            _terminalDeployer
+        ).deployStakingProject(
+            JBProjectMetadata({content: '', domain: 0}),
+            stakingToken,
+            IJBTokenUriResolver(address(0)),
+            "Juicebox Staking Test",
+            "JST",
+            "",
+            "",
+            bytes32(0)
         );
     }
 
@@ -139,9 +93,8 @@ contract EmptyTest_Fork is Test {
         // Calculate the cost for the mint
         uint256 _cost;
         for (uint256 _i; _i < _tierIds.length;) {
-            // TODO: for now this is a hardcoded price
-            vm.assume(_cost < type(uint224).max - 100 ether);
-            _cost += 100 ether;
+            _tierIds[_i] = uint16(bound(_tierIds[_i], 0, 59));
+            _cost += _validateTierAndGetCost(delegate, _tierIds[_i]);
 
             unchecked {
                 ++_i;
@@ -173,9 +126,11 @@ contract EmptyTest_Fork is Test {
     function testPay_customStakeAmount(uint16 _tierId, uint128 _customAdditionalStakeAmount, address _delegatingTo)
         public
     {
-        // Calculate the cost for the mint
+        // Check against oveflow
         vm.assume(_customAdditionalStakeAmount < type(uint128).max - 100 ether);
-        uint128 _cost = 100 ether + uint128(_customAdditionalStakeAmount);
+
+        _tierId = uint16(bound(_tierId, 0, 59));
+        uint128 _cost = uint128(_validateTierAndGetCost(delegate, _tierId)) + uint128(_customAdditionalStakeAmount);
 
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _cost});
@@ -218,9 +173,8 @@ contract EmptyTest_Fork is Test {
         // Calculate the cost for the mint
         uint256 _cost;
         for (uint256 _i; _i < _tierIds.length;) {
-            // TODO: for now this is a hardcoded price
-            vm.assume(_cost < type(uint224).max - 100 ether);
-            _cost += 100 ether;
+            _tierIds[_i] = uint8(bound(_tierIds[_i], 0, 59));
+            _cost += _validateTierAndGetCost(delegate, _tierIds[_i]);
 
             unchecked {
                 ++_i;
@@ -277,5 +231,18 @@ contract EmptyTest_Fork is Test {
         // Mint the needed tokens
         _stakingToken.mint(_stakingToken.projectId(), _to, _amount);
         vm.stopPrank();
+    }
+
+    function _validateTierAndGetCost(JB721StakingDelegate _delegate, uint16 _tierId)
+        internal
+        view
+        returns (uint256 _cost)
+    {
+        // ValidateTier
+        uint256 _maxTier = _delegate.maxTier();
+        vm.assume(_tierId <= _maxTier);
+
+        JB721Tier memory _tier = _delegate.tierOf(address(_delegate), _tierId, false);
+        return _tier.price;
     }
 }
