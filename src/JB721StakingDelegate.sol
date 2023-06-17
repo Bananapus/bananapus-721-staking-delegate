@@ -357,7 +357,6 @@ contract JB721StakingDelegate is
                 // Keep a reference to the the specific tier IDs to mint.
                 JB721StakingTier[] memory _tierIdsToMint;
 
-                // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
                 (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
                 if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
@@ -603,7 +602,8 @@ contract JB721StakingDelegate is
         }
 
         // Something went wrong if we haven't returned yet
-        assert(false);
+        // revert is more gass efficient
+        revert();
     }
 
     /**
