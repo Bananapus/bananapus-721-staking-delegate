@@ -69,7 +69,7 @@ contract JB721StakingDelegate is
      * @notice
      *   The contract that stores and manages the NFT's data.
      */
-    IJBTokenUriResolver immutable public uriResolver;
+    IJBTokenUriResolver public immutable uriResolver;
 
     /**
      * @notice
@@ -252,47 +252,10 @@ contract JB721StakingDelegate is
         // TODO: non-hardcode
         maxTier = 59;
         tierMultiplier = (10 ** 18);
-        
 
         // Initialize the superclass.
         JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
     }
-
-    // function initialize(
-    //     uint256 _projectId,
-    //     IERC20 _stakingToken,
-    //     IJBDirectory _directory,
-    //     IJBTokenUriResolver _uriResolver,
-    //     string memory _name,
-    //     string memory _symbol,
-    //     string memory _contractURI,
-    //     string memory _baseURI,
-    //     bytes32 _encodedIPFSUri
-    // ) external {
-    //     // Make the original un-initializable.
-    //     if (address(this) == codeOrigin) revert();
-
-    //     // Stop re-initialization.
-    //     if (projectId != 0) revert();
-
-    //     stakingToken = _stakingToken;
-
-    //     uriResolver = _uriResolver;
-
-    //     contractURI = _contractURI;
-
-    //     encodedIPFSUri = _encodedIPFSUri;
-
-    //     baseURI = _baseURI;
-
-    //     // TODO: non-hardcode
-    //     maxTier = 59;
-    //     tierMultiplier = (10 ** 18);
-        
-
-    //     // Initialize the superclass.
-    //     JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
-    // }
 
     /**
      * @notice
@@ -359,11 +322,13 @@ contract JB721StakingDelegate is
 
                 // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
-                (,,,, _votingDelegate, _tierIdsToMint) = abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
+                (,,,, _votingDelegate, _tierIdsToMint) =
+                    abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
                 if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
 
                 // Mint the specified tiers with the custom stake amount
-                _leftoverAmount = _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
+                _leftoverAmount =
+                    _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
             } else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
@@ -383,11 +348,11 @@ contract JB721StakingDelegate is
     }
 
     /**
-     * @notice 
+     * @notice
      *     Part of IJBFundingCycleDataSource, this function gets called when a project's token holders redeem.
-     * 
+     *
      *     @param _data The Juicebox standard project redemption data.
-     * 
+     *
      *     @return reclaimAmount The amount that should be reclaimed from the treasury.
      *     @return memo The memo that should be forwarded to the event.
      *     @return delegateAllocations The amount to send to delegates instead of adding to the beneficiary.
@@ -417,8 +382,6 @@ contract JB721StakingDelegate is
 
         return (redemptionWeightOf(_decodedTokenIds, _data), _data.memo, delegateAllocations);
     }
-
-
 
     /**
      * @notice
@@ -468,10 +431,12 @@ contract JB721StakingDelegate is
      *
      * @return _leftoverAmount The amount that is left over after the tiers were minted.
      */
-    function _mintTiersWithCustomAmount(uint256 _value, JB721StakingTier[] memory _tiers, address _beneficiary, address _votingDelegate)
-        internal
-        returns (uint256 _leftoverAmount)
-    {
+    function _mintTiersWithCustomAmount(
+        uint256 _value,
+        JB721StakingTier[] memory _tiers,
+        address _beneficiary,
+        address _votingDelegate
+    ) internal returns (uint256 _leftoverAmount) {
         _leftoverAmount = _value;
         uint256 _mintsLength = _tiers.length;
 
@@ -542,7 +507,7 @@ contract JB721StakingDelegate is
     }
 
     /**
-     * @notice 
+     * @notice
      * Get the base minimum amount for each tier, as specified by the veJBX tier ranges
      * @param _tierId the id to get the minimum amount for
      * @return _baseAmount the minimum token amount for the tier, pre-multiplied
@@ -556,51 +521,29 @@ contract JB721StakingDelegate is
             _tierId = _tierId + 1;
         }
 
+        // 1-10
         if (_tierId <= 10) {
-            // 1-10
-            if(_tierId == 1){
+            if (_tierId == 1) {
                 return 1;
             }
             return _tierId * 100 - 100;
         }
-
-        if (_tierId <= 20) {
-            // 11-20
-            return (_tierId - 10) * 1_000;
-        }
-
-        if (_tierId <= 30) {
-            // 20-30
-            return (_tierId - 20) * 2_000 + 10_000; 
-        }
-
-        if (_tierId <= 37) {
-            // 30-37
-            return (_tierId - 27) * 10_000; 
-        }
-
-        if (_tierId <= 46) {
-            // 37-46
-            return (_tierId - 36) * 100_000;
-        }
-
-        if (_tierId <= 55) {
-            // 56-55
-            return (_tierId - 45) * 1_000_000;
-        }
-
-        if (_tierId <= 58) {
-            // 56-58
-            return (_tierId - 55) * 10_000_000;
-        }
-
-        if (_tierId == 59) {
-            return 100_000_000;
-        }
-
-        if (_tierId == 60) {
-            return 600_000_000;
-        }
+        // 11-20
+        if (_tierId <= 20) return (_tierId - 10) * 1000;
+        // 20-30
+        if (_tierId <= 30) return (_tierId - 20) * 2000 + 10_000;
+        // 30-37
+        if (_tierId <= 37) return (_tierId - 27) * 10_000;
+        // 37-46
+        if (_tierId <= 46) return (_tierId - 36) * 100_000;
+        // 46-55
+        if (_tierId <= 55) return (_tierId - 45) * 1_000_000;
+        // 56-58
+        if (_tierId <= 58) return (_tierId - 55) * 10_000_000;
+        // 59
+        if (_tierId == 59) return 100_000_000;
+        // 60
+        if (_tierId == 60) return 600_000_000;
 
         // Something went wrong if we haven't returned yet
         assert(false);

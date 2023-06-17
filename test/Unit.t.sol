@@ -32,19 +32,15 @@ contract DelegateTest_Unit is Test {
         _deployer.deploy(_projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0"));
     }
 
-    function testMint_customStakeAmount(
-        address _payer,
-        uint16 _tierId,
-        uint96 _customAdditionalStakeAmount
-    ) public {
+    function testMint_customStakeAmount(address _payer, uint16 _tierId, uint96 _customAdditionalStakeAmount) public {
         vm.assume(_payer != address(0));
-        
+
         JB721StakingDelegate _delegate = _deployDelegate();
         uint128 _value = uint128(_validateTierAndGetCost(_delegate, _tierId));
 
         // Check that we won't overflow if we add the _customAdditionalStakeAmount
         vm.assume(_customAdditionalStakeAmount < type(uint128).max - _value);
-        
+
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _value});
 
@@ -61,29 +57,37 @@ contract DelegateTest_Unit is Test {
         assertEq(_delegate.stakingTokenBalance(_expectedTokenId), _value);
     }
 
-     function testMint_customStakeAmount_reverts_tierStakeTooSmall(address _payer, uint16 _tierId, uint128 _tierStakeAmount) public {
+    function testMint_customStakeAmount_reverts_tierStakeTooSmall(
+        address _payer,
+        uint16 _tierId,
+        uint128 _tierStakeAmount
+    ) public {
         vm.assume(_payer != address(0));
-        
+
         JB721StakingDelegate _delegate = _deployDelegate();
 
         // Make sure that the amount we are going to send is not enough for the tier
         uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
         vm.assume(_tierStakeAmount < _tierCost);
-        
+
         // Here we specify the incorrect amount, this is not enough stake for this tier
         // However in the actual payment we do pay enought to mint this tier
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierStakeAmount});
 
-        vm.expectRevert(abi.encodeWithSelector(STAKE_NOT_ENOUGH_FOR_TIER.selector, _tierId, _tierCost, _tierStakeAmount));
+        vm.expectRevert(
+            abi.encodeWithSelector(STAKE_NOT_ENOUGH_FOR_TIER.selector, _tierId, _tierCost, _tierStakeAmount)
+        );
 
         vm.prank(address(_terminal));
         _delegate.didPay(_buildPayData(_payer, _tierCost, _payer, _tiers));
     }
 
-    function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
+    function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, uint16 _tierId, uint128 _paymentAmount)
+        public
+    {
         vm.assume(_payer != address(0));
-        
+
         JB721StakingDelegate _delegate = _deployDelegate();
 
         // Make sure that the amount we are going to send is not enough for the tier
@@ -101,12 +105,13 @@ contract DelegateTest_Unit is Test {
         _delegate.didPay(_buildPayData(_payer, _paymentAmount, _payer, _tiers));
     }
 
-
-    function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, uint16 _tierId, uint128 _paymentAmount) public {
+    function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, uint16 _tierId, uint128 _paymentAmount)
+        public
+    {
         vm.assume(_payer != address(0));
 
         JB721StakingDelegate _delegate = _deployDelegate();
-        
+
         uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
         _paymentAmount = uint128(bound(_paymentAmount, _tierCost + 1, type(uint128).max));
 
@@ -143,11 +148,16 @@ contract DelegateTest_Unit is Test {
         assertEq(_delegate.stakingTokenBalance(_expectedTokenId), _value);
     }
 
-    function testMint_defaultStakeAmount_reverts_paymentTooSmall(address _payer, address _beneficiary, uint16 _tierId, uint224 _paymentAmount) public {
+    function testMint_defaultStakeAmount_reverts_paymentTooSmall(
+        address _payer,
+        address _beneficiary,
+        uint16 _tierId,
+        uint224 _paymentAmount
+    ) public {
         vm.assume(_beneficiary != address(0));
         vm.assume(_payer != address(0));
-        
-         JB721StakingDelegate _delegate = _deployDelegate();
+
+        JB721StakingDelegate _delegate = _deployDelegate();
 
         // Make sure that the amount we are going to send is not enough for the tier
         uint128 _tierCost = uint128(_validateTierAndGetCost(_delegate, _tierId));
@@ -163,7 +173,12 @@ contract DelegateTest_Unit is Test {
         _delegate.didPay(_buildPayData(_payer, _paymentAmount, _beneficiary, _tierIds));
     }
 
-    function testMint_defaultStakeAmount_reverts_paymentTooBig(address _payer, address _beneficiary, uint16 _tierId, uint224 _paymentAmount) public {
+    function testMint_defaultStakeAmount_reverts_paymentTooBig(
+        address _payer,
+        address _beneficiary,
+        uint16 _tierId,
+        uint224 _paymentAmount
+    ) public {
         vm.assume(_beneficiary != address(0));
         vm.assume(_payer != address(0));
 
@@ -208,7 +223,8 @@ contract DelegateTest_Unit is Test {
         assertEq(_delegate.getVotes(_beneficiary), _votingPowerPreMint + _stakingAmount);
     }
 
-    /// This checks that the user themselves does not get the votingPower if their voting power is delegated to some other address
+    /// This checks that the user themselves does not get the votingPower if their voting power is delegated to some
+    /// other address
     function testMint_beneficiaryDoesNotReceiveVotingPowerWhenNotDelegated(
         address _beneficiary,
         uint16 _tierId,
@@ -293,7 +309,9 @@ contract DelegateTest_Unit is Test {
         vm.assume(type(uint224).max - _userDelegateVotingPowerBefore > _token.amount);
         vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore > _token.amount);
         vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore > _userDelegateVotingPowerBefore);
-        vm.assume(type(uint224).max - _recipientDelegateVotingPowerBefore - _token.amount > _userDelegateVotingPowerBefore);
+        vm.assume(
+            type(uint224).max - _recipientDelegateVotingPowerBefore - _token.amount > _userDelegateVotingPowerBefore
+        );
 
         // We exclude the scenario where both users delegate to the same address, since that complicates this test
         vm.assume(_userDelegate != _recipientDelegate);
@@ -325,38 +343,26 @@ contract DelegateTest_Unit is Test {
 
         // Check that the delegate received the voting power
         // (this is just a sanity check)
-        if(_userVotingPowerIsDelegated){
-            assertEq(
-                _delegate.getVotes(_userDelegate),
-                _userDelegateVotingPowerBefore + _token.amount
-            );
-        }else{
+        if (_userVotingPowerIsDelegated) {
+            assertEq(_delegate.getVotes(_userDelegate), _userDelegateVotingPowerBefore + _token.amount);
+        } else {
             // If the user has 'delegated' to the zero address this means that their voting power is inactive,
             // The zero address should never have any voting power
-            assertEq(
-                _delegate.getVotes(_userDelegate),
-                0
-            );
+            assertEq(_delegate.getVotes(_userDelegate), 0);
         }
-        
+
         // Transfer the token to the beneficiary
         vm.prank(_user);
         _delegate.transferFrom(_user, _recipient, _tokenID);
 
         // Check that the users delegated voting power has decreased
-        if(_userVotingPowerIsDelegated){
-            assertEq(
-                _delegate.getVotes(_userDelegate),
-                _userDelegateVotingPowerBefore
-            );
+        if (_userVotingPowerIsDelegated) {
+            assertEq(_delegate.getVotes(_userDelegate), _userDelegateVotingPowerBefore);
         }
 
         // And that the recipient delegated voting power has increased
-        if(_recipientVotingPowerIsDelegated){
-            assertEq(
-                _delegate.getVotes(_recipientDelegate),
-                _recipientDelegateVotingPowerBefore + _token.amount
-            );
+        if (_recipientVotingPowerIsDelegated) {
+            assertEq(_delegate.getVotes(_recipientDelegate), _recipientDelegateVotingPowerBefore + _token.amount);
         }
     }
 
@@ -375,7 +381,11 @@ contract DelegateTest_Unit is Test {
         return (_tierId * 1_000_000_000) + _tokenNumber;
     }
 
-    function _validateTierAndGetCost(JB721StakingDelegate _delegate, uint16 _tierId) internal view returns (uint256 _cost) {
+    function _validateTierAndGetCost(JB721StakingDelegate _delegate, uint16 _tierId)
+        internal
+        view
+        returns (uint256 _cost)
+    {
         // ValidateTier
         uint256 _maxTier = _delegate.maxTier();
         vm.assume(_tierId <= _maxTier);
@@ -406,7 +416,7 @@ contract DelegateTest_Unit is Test {
         if (_beneficiary == address(0)) return;
         uint256 _currentVotes = _delegate.getVotes(_beneficiary);
 
-        // Transfer voting units from the zero address to the user 
+        // Transfer voting units from the zero address to the user
         _delegate.ForTest_transferVotingUnits(address(0), _beneficiary, _votingPowerAmount);
 
         // Assert that the voting power was received
@@ -486,7 +496,7 @@ contract DelegateTest_Unit is Test {
         });
     }
 
-     // Seed for the generation of pseudorandom addresses
+    // Seed for the generation of pseudorandom addresses
     bytes32 private _nextAddressSeed = keccak256(abi.encodePacked("address"));
 
     /**
@@ -549,7 +559,7 @@ contract DelegateTest_Unit is Test {
 }
 
 contract JB721StakingDelegateHarness is JB721StakingDelegate {
-     constructor(
+    constructor(
         uint256 _projectId,
         IERC20 _stakingToken,
         IJBDirectory _directory,
@@ -559,9 +569,19 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         string memory _contractURI,
         string memory _baseURI,
         bytes32 _encodedIPFSUri
-    ) JB721StakingDelegate(_projectId, _stakingToken, _directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri)
+    )
+        JB721StakingDelegate(
+            _projectId,
+            _stakingToken,
+            _directory,
+            _uriResolver,
+            _name,
+            _symbol,
+            _contractURI,
+            _baseURI,
+            _encodedIPFSUri
+        )
     {}
-
 
     function ForTest_mintTo(uint16 _tierId, uint256 _stakingAmountWorth, address _beneficiary)
         external
@@ -573,7 +593,7 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
     function ForTest_transferVotingUnits(address _from, address _to, uint224 _amount) external {
         address _fromDelegateBefore = delegates(_from);
         address _toDelegateBefore = delegates(_to);
-        
+
         // Update the delegate to themselves
         _delegate(_from, _from);
         _delegate(_to, _to);
@@ -586,7 +606,7 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         _delegate(_to, _toDelegateBefore);
     }
 
-    function ForTest_getCost(uint16 _tierId) external view returns (uint256 _minStake){
+    function ForTest_getCost(uint16 _tierId) external view returns (uint256 _minStake) {
         return _getTierMinStake(_tierId);
     }
 }
