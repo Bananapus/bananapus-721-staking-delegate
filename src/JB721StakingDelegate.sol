@@ -320,7 +320,6 @@ contract JB721StakingDelegate is
                 // Keep a reference to the the specific tier IDs to mint.
                 JB721StakingTier[] memory _tierIdsToMint;
 
-                // TODO: Possibly add voting power delegation to the metadata to simplify UX
                 // Decode the metadata.
                 (,,,, _votingDelegate, _tierIdsToMint) =
                     abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
@@ -546,7 +545,8 @@ contract JB721StakingDelegate is
         if (_tierId == 60) return 600_000_000;
 
         // Something went wrong if we haven't returned yet
-        assert(false);
+        // revert is more gass efficient
+        revert();
     }
 
     /**
