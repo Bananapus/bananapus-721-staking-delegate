@@ -80,7 +80,6 @@ contract JB721StakingDelegate is
     /**
      * @notice
      * The common base for the tokenUri's
-     *
      */
     string public baseURI;
 
@@ -91,8 +90,16 @@ contract JB721StakingDelegate is
      */
     bytes32 public immutable encodedIPFSUri;
 
+    /**
+     * @notice
+     * The max tier that is allowed (up to a limit of 59)
+     */
     uint256 public immutable maxTier;
 
+    /**
+     * @notice
+     * The multiplier used for minimum token amounts
+     */
     uint256 public immutable tierMultiplier;
 
     //*********************************************************************//
@@ -120,13 +127,11 @@ contract JB721StakingDelegate is
             votingUnits: _price,
             reservedRate: type(uint256).max,
             reservedTokenBeneficiary: address(0),
-            royaltyRate: 0,
-            royaltyBeneficiary: address(0),
             encodedIPFSUri: _encodedIPFSUri,
             category: 0,
             allowManualMint: false,
             transfersPausable: false,
-            useVotingUnits: false
+            resolvedUri: _includeResolvedUri ? tokenURI(_id) : ""
         });
     }
 
@@ -528,9 +533,9 @@ contract JB721StakingDelegate is
             return _tierId * 100 - 100;
         }
         // 11-20
-        if (_tierId <= 20) return (_tierId - 10) * 1000;
+        if (_tierId <= 20) return (_tierId - 10) * 1_000;
         // 20-30
-        if (_tierId <= 30) return (_tierId - 20) * 2000 + 10_000;
+        if (_tierId <= 30) return (_tierId - 20) * 2_000 + 10_000;
         // 30-37
         if (_tierId <= 37) return (_tierId - 27) * 10_000;
         // 37-46

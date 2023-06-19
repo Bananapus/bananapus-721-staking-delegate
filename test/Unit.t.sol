@@ -15,6 +15,7 @@ contract DelegateTest_Unit is Test {
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
 
     uint256 _projectId = 103;
+    string _baseUri;
 
     IERC20Metadata internal _stakingToken = IERC20Metadata(_mockContract("staking_token"));
     IJBController _controller = IJBController(_mockContract("jb_controller"));
@@ -44,7 +45,7 @@ contract DelegateTest_Unit is Test {
     }
 
     function testDeploy() public {
-        _deployer.deployDelegate(_projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", "", bytes32("0"));
+        _deployer.deployDelegate(_projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0"));
     }
 
     function testMint_customStakeAmount(address _payer, uint16 _tierId, uint96 _customAdditionalStakeAmount) public {
@@ -411,7 +412,7 @@ contract DelegateTest_Unit is Test {
 
     function _deployDelegate() internal returns (JB721StakingDelegateHarness _delegate) {
         _delegate = new JB721StakingDelegateHarness(
-            _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", "", bytes32("0")
+            _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0")
         );
 
         vm.mockCall(
