@@ -102,7 +102,36 @@ contract JB721StakingDelegateDeployer {
         _terminals[0] = _stakingTerminal;
 
         // Deploy the project and configure it to use the delegate and project token terminal
-        _stakingProjectId = controller.launchProjectFor(
+        _stakingProjectId = _launchProject(_projectMetadata, _delegate, _terminals);
+
+        // Add the delegate to the registry. Contract nonce starts at 1.
+        unchecked {
+            delegatesRegistry.addDelegate(address(this), ++_nonce);
+        }
+    }
+
+    /**
+     * @notice deploy a staking delegate
+     */
+    function deployDelegate(
+        uint256 _projectId,
+        IERC20Metadata _stakingToken,
+        IJBTokenUriResolver _uriResolver,
+        string memory _name,
+        string memory _symbol,
+        string memory _contractURI,
+        string memory _baseURI,
+        bytes32 _encodedIPFSUri,
+        uint256 _tierMultiplier,
+        uint8 _maxTier
+    ) public returns (JB721StakingDelegate _newDelegate) {
+        _newDelegate = new JB721StakingDelegate(
+            _projectId, _stakingToken, directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri, _tierMultiplier, _maxTier
+        );
+    }
+
+    function _launchProject(JBProjectMetadata memory _projectMetadata ,JB721StakingDelegate _delegate, IJBPaymentTerminal[] memory _terminals) internal returns (uint256 _stakingProjectId) {
+        return controller.launchProjectFor(
             address(0x1), // TODO: replace with a better address to prove there is no owner
             _projectMetadata,
             JBFundingCycleData({duration: 0, weight: 0, discountRate: 0, ballot: IJBFundingCycleBallot(address(0))}),
@@ -135,31 +164,6 @@ contract JB721StakingDelegateDeployer {
             new JBFundAccessConstraints[](0),
             _terminals,
             ""
-        );
-
-        // Add the delegate to the registry. Contract nonce starts at 1.
-        unchecked {
-            delegatesRegistry.addDelegate(address(this), ++_nonce);
-        }
-    }
-
-    /**
-     * @notice deploy a staking delegate
-     */
-    function deployDelegate(
-        uint256 _projectId,
-        IERC20Metadata _stakingToken,
-        IJBTokenUriResolver _uriResolver,
-        string memory _name,
-        string memory _symbol,
-        string memory _contractURI,
-        string memory _baseURI,
-        bytes32 _encodedIPFSUri,
-        uint256 _tierMultiplier,
-        uint8 _maxTier
-    ) public returns (JB721StakingDelegate _newDelegate) {
-        _newDelegate = new JB721StakingDelegate(
-            _projectId, _stakingToken, directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri, _tierMultiplier, _maxTier
         );
     }
 }
