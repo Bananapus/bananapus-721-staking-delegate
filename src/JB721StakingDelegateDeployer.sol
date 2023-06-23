@@ -7,6 +7,7 @@ import "./JBERC20TerminalDeployer.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/JBERC20PaymentTerminal.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
+import { IJBDelegatesRegistry } from "@jbx-protocol/juice-delegates-registry/src/interfaces/IJBDelegatesRegistry.sol";
 
 contract JB721StakingDelegateDeployer {
     IJBController public immutable controller;
@@ -18,6 +19,15 @@ contract JB721StakingDelegateDeployer {
 
     JBERC20TerminalDeployer public immutable terminalDeployer;
 
+    /// @notice A contract that stores references to deployer contracts of delegates.
+    IJBDelegatesRegistry public immutable delegatesRegistry;
+
+    /**
+     * @notice 
+     * This contract's current nonce, used for the Juicebox delegates registry.
+     */
+    uint256 internal _nonce;
+
     /**
      *
      */
@@ -28,7 +38,8 @@ contract JB721StakingDelegateDeployer {
         IJBOperatorStore _operatorStore,
         IJBSingleTokenPaymentTerminalStore _tokenPaymentTerminalStore,
         IJBSplitsStore _splitStore,
-        JBERC20TerminalDeployer _terminalDeployer
+        JBERC20TerminalDeployer _terminalDeployer,
+        IJBDelegatesRegistry _delegatesRegistry
     ) {
         controller = _controller;
         tokenPaymentTerminalStore = _tokenPaymentTerminalStore;
@@ -37,6 +48,7 @@ contract JB721StakingDelegateDeployer {
         splitStore = _splitStore;
         projects = _projects;
         terminalDeployer = _terminalDeployer;
+        delegatesRegistry = _delegatesRegistry;
     }
 
     /**
@@ -53,7 +65,9 @@ contract JB721StakingDelegateDeployer {
         string memory _symbol,
         string memory _contractURI,
         string memory _baseURI,
-        bytes32 _encodedIPFSUri
+        bytes32 _encodedIPFSUri,
+        uint256 _tierMultiplier,
+        uint8 _maxTier
     )
         external
         returns (
@@ -67,7 +81,7 @@ contract JB721StakingDelegateDeployer {
 
         // Deploy the delegate
         _delegate = deployDelegate(
-            _projectId, _stakingToken, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri
+            _projectId, _stakingToken, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri, _tierMultiplier, _maxTier
         );
 
         // Deploy a new terminal for the project token
@@ -122,6 +136,11 @@ contract JB721StakingDelegateDeployer {
             _terminals,
             ""
         );
+
+        // Add the delegate to the registry. Contract nonce starts at 1.
+        unchecked {
+            delegatesRegistry.addDelegate(address(this), ++_nonce);
+        }
     }
 
     /**
@@ -135,10 +154,12 @@ contract JB721StakingDelegateDeployer {
         string memory _symbol,
         string memory _contractURI,
         string memory _baseURI,
-        bytes32 _encodedIPFSUri
+        bytes32 _encodedIPFSUri,
+        uint256 _tierMultiplier,
+        uint8 _maxTier
     ) public returns (JB721StakingDelegate _newDelegate) {
         _newDelegate = new JB721StakingDelegate(
-            _projectId, _stakingToken, directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri
+            _projectId, _stakingToken, directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri, _tierMultiplier, _maxTier
         );
     }
 }

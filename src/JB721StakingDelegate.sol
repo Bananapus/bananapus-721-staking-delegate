@@ -25,6 +25,7 @@ contract JB721StakingDelegate is
     error DELEGATION_NOT_ALLOWED();
     error INVALID_TOKEN();
     error INVALID_TIER();
+    error INVALID_MAX_TIER();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
     error INSUFFICIENT_VALUE();
     error OVERSPENDING();
@@ -240,9 +241,12 @@ contract JB721StakingDelegate is
         string memory _symbol,
         string memory _contractURI,
         string memory _baseURI,
-        bytes32 _encodedIPFSUri
+        bytes32 _encodedIPFSUri,
+        uint256 _tierMultiplier,
+        uint8 _maxTier
     ) {
         if (projectId != 0) revert();
+        if (_maxTier > 59) revert INVALID_MAX_TIER();
 
         stakingToken = _stakingToken;
 
@@ -254,9 +258,9 @@ contract JB721StakingDelegate is
 
         baseURI = _baseURI;
 
-        // TODO: non-hardcode
-        maxTier = 59;
-        tierMultiplier = (10 ** 18);
+        maxTier = _maxTier;
+
+        tierMultiplier = _tierMultiplier;
 
         // Initialize the superclass.
         JB721Delegate._initialize(_projectId, _directory, _name, _symbol);

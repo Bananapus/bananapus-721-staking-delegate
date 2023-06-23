@@ -25,6 +25,7 @@ contract EmptyTest_Fork is Test {
     IJBSplitsStore JBSplitsStore;
     IJBProjects JBProjects;
     JB721StakingDelegate delegate;
+    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0x7A53cAA1dC4d752CAD283d039501c0Ee45719FaC); 
 
     address projectOwner = address(0x7331);
 
@@ -76,7 +77,8 @@ contract EmptyTest_Fork is Test {
             JBOperatable(address(JBDirectory)).operatorStore(),
             JBsingleTokenPaymentStore,
             JBSplitsStore,
-            _terminalDeployer
+            _terminalDeployer,
+            registry
         ).deployStakingProject(
             JBProjectMetadata({content: '', domain: 0}),
             stakingToken,
@@ -85,7 +87,9 @@ contract EmptyTest_Fork is Test {
             "JST",
             "",
             "",
-            bytes32(0)
+            bytes32(0),
+            10 ** 18,
+            59
         );
     }
 

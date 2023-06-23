@@ -28,6 +28,7 @@ contract DelegateTest_Unit is Test {
     IJBOperatorStore _operatorStore = IJBOperatorStore(_mockContract("jb_operator_store"));
     IJBProjects _projects = IJBProjects(_mockContract("jb_projects"));
     JBERC20TerminalDeployer _terminalDeployer = JBERC20TerminalDeployer(_mockContract("jb_terminal_deployer"));
+    IJBDelegatesRegistry _delegateRegistry = IJBDelegatesRegistry(_mockContract("jb_delegate_registry"));
 
     JB721StakingDelegateDeployer _deployer;
 
@@ -40,12 +41,13 @@ contract DelegateTest_Unit is Test {
             _operatorStore,
             _terminalStore,
             _splitStore,
-            _terminalDeployer
+            _terminalDeployer,
+            _delegateRegistry
         );
     }
 
     function testDeploy() public {
-        _deployer.deployDelegate(_projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0"));
+        _deployer.deployDelegate(_projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0"), 10 ** 18, 59);
     }
 
     function testMint_customStakeAmount(address _payer, uint16 _tierId, uint96 _customAdditionalStakeAmount) public {
@@ -412,7 +414,7 @@ contract DelegateTest_Unit is Test {
 
     function _deployDelegate() internal returns (JB721StakingDelegateHarness _delegate) {
         _delegate = new JB721StakingDelegateHarness(
-            _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0")
+            _projectId, _stakingToken, _directory, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0"), 10 ** 18, 59
         );
 
         vm.mockCall(
@@ -584,7 +586,9 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         string memory _symbol,
         string memory _contractURI,
         string memory _baseURI,
-        bytes32 _encodedIPFSUri
+        bytes32 _encodedIPFSUri,
+        uint256 _tierMultiplier,
+        uint8 _maxTier
     )
         JB721StakingDelegate(
             _projectId,
@@ -595,7 +599,9 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
             _symbol,
             _contractURI,
             _baseURI,
-            _encodedIPFSUri
+            _encodedIPFSUri,
+            _tierMultiplier,
+            _maxTier
         )
     {}
 
