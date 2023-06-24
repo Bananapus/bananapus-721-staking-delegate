@@ -103,11 +103,6 @@ contract JB721StakingDelegateDeployer {
 
         // Deploy the project and configure it to use the delegate and project token terminal
         _stakingProjectId = _launchProject(_projectMetadata, _delegate, _terminals);
-
-        // Add the delegate to the registry. Contract nonce starts at 1.
-        unchecked {
-            delegatesRegistry.addDelegate(address(this), ++_nonce);
-        }
     }
 
     /**
@@ -128,6 +123,11 @@ contract JB721StakingDelegateDeployer {
         _newDelegate = new JB721StakingDelegate(
             _projectId, _stakingToken, directory, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri, _tierMultiplier, _maxTier
         );
+
+        // Add the delegate to the registry. Contract nonce starts at 1.
+        unchecked {
+            delegatesRegistry.addDelegate(address(this), ++_nonce);
+        }
     }
 
     function _launchProject(JBProjectMetadata memory _projectMetadata ,JB721StakingDelegate _delegate, IJBPaymentTerminal[] memory _terminals) internal returns (uint256 _stakingProjectId) {

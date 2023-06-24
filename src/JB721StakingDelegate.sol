@@ -114,26 +114,51 @@ contract JB721StakingDelegate is
      * @param _id the TierID
      * @param _includeResolvedUri if the tierURI should be resolved
      */
-    function tierOf(address, uint256 _id, bool _includeResolvedUri) external view returns (JB721Tier memory tier) {
+    function tierOf(address, uint256 _id, bool _includeResolvedUri) public view returns (JB721Tier memory tier) {
         _includeResolvedUri;
-
         uint256 _price = _getTierMinStake(uint16(_id));
-        bytes32 _encodedIPFSUri;
 
         return JB721Tier({
             id: _id,
             price: _price,
-            remainingQuantity: type(uint128).max - numberOfTokensMintedOfTier[_id],
-            initialQuantity: type(uint128).max,
+            remainingQuantity: _ONE_BILLION - numberOfTokensMintedOfTier[_id],
+            initialQuantity: _ONE_BILLION,
             votingUnits: _price,
-            reservedRate: type(uint256).max,
+            reservedRate: _ONE_BILLION,
             reservedTokenBeneficiary: address(0),
-            encodedIPFSUri: _encodedIPFSUri,
+            encodedIPFSUri: encodedIPFSUri,
             category: 0,
             allowManualMint: false,
             transfersPausable: false,
             resolvedUri: _includeResolvedUri ? tokenURI(_id) : ""
         });
+    }
+
+    /// @notice Gets an array of active tiers.
+    /// @param _includeResolvedUri If enabled, if there's a token URI resolver, the content will be resolved and included.
+    /// @param _startingId The starting tier ID of the array of tiers sorted by contribution floor. Send 0 to get all active tiers.
+    /// @param _size The number of tiers to include.
+    /// @return _tiers An array of active tiers.
+    function tiersOf(
+        address,
+        uint256[] calldata,
+        bool _includeResolvedUri,
+        uint256 _startingId,
+        uint256 _size
+    ) external view override returns (JB721Tier[] memory _tiers) {
+        // Check up to what tierId we are going to be loading
+        uint256 _upToTier = _startingId + _size;
+        // Cap at the last tier
+        if (_upToTier > maxTier + 1) _upToTier = maxTier + 1;
+
+        // Initialize an array with the appropriate length.
+        _tiers = new JB721Tier[](_upToTier - _startingId);
+
+        uint256 _index;
+        uint256 _currentTier = _startingId;
+        while(_currentTier < _upToTier) {
+            _tiers[_index++] = tierOf(address(0), _currentTier++, _includeResolvedUri);
+        }
     }
 
     /**

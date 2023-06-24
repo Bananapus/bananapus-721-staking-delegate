@@ -391,6 +391,16 @@ contract DelegateTest_Unit is Test {
         _delegate.ForTest_getCost(_tierId);
     }
 
+    // This test is intended to check the gas usage of the tier stake lookup
+    function testTiersOf() public {
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+
+        uint256[] memory _categories;
+        JB721Tier[] memory _tiers = _delegate.tiersOf(address(0), _categories, false, 15, 63);
+
+        assertEq(_tiers.length, 45);
+    }
+
     //*********************************************************************//
     // ----------------------------- Helpers ----------------------------- //
     //*********************************************************************//

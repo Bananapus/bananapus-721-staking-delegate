@@ -12,6 +12,14 @@ interface IJBTiered721MinimalDelegateStore {
         external
         view
         returns (JB721Tier memory tier);
+    
+    function tiersOf(
+        address _nft,
+        uint256[] calldata _categories,
+        bool _includeResolvedUri,
+        uint256 _startingId,
+        uint256 _size
+    ) external view returns (JB721Tier[] memory _tiers) ;
 
     function flagsOf(address _nft) external view returns (JBTiered721Flags memory);
 
