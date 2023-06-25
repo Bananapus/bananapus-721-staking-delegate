@@ -12,6 +12,7 @@ contract JB721StakingUriResolver {
     using LibColor for Color;
 
     address immutable SVG_TEMPLATE_POINTER;
+    address immutable SVG_TEMPLATE_INDICES_POINTER;
 
     string constant REPLACEMENT_OPEN_SYMBOL = "!!{";
     string constant REPLACEMENT_CLOSE_SYMBOL = "}";
@@ -34,7 +35,16 @@ contract JB721StakingUriResolver {
     uint256 private constant _ROUND_TO = 10 ** 15;
 
     constructor(address _svgTemplatePointer) {
+        // Store the pointer to the template
         SVG_TEMPLATE_POINTER = _svgTemplatePointer;
+        // Load the template
+        string memory _template = _loadTemplate();
+        // Calculate where we will need to replace occurances in `tokenUri`
+        uint256[] memory _indices = _template.indicesOf(
+            REPLACEMENT_OPEN_SYMBOL
+        );
+        // Store them
+        SVG_TEMPLATE_INDICES_POINTER = SSTORE2.write(bytes(abi.encode(_indices)));
     }
 
     function tokenUri(uint256 tokenId) external view returns (string memory) {
@@ -55,12 +65,12 @@ contract JB721StakingUriResolver {
                 REPLACEMENT_CLOSE_SYMBOL,
                 _newLocation + bytes(REPLACEMENT_OPEN_SYMBOL).length
             );
-            string memory _indentifier = _template.slice(
+            string memory _identifier = _template.slice(
                 _newLocation + bytes(REPLACEMENT_OPEN_SYMBOL).length,
                 _closeLocation
             );
 
-            if (_indentifier.eq(GRADIENT_COLOR_A)) {
+            if (_identifier.eq(GRADIENT_COLOR_A)) {
                 int256 _diff;
                 (_template, _diff) = _replaceInTemplate(
                     _template,
@@ -72,7 +82,7 @@ contract JB721StakingUriResolver {
                 continue;
             }
 
-            if (_indentifier.eq(GRADIENT_COLOR_B)) {
+            if (_identifier.eq(GRADIENT_COLOR_B)) {
                 int256 _diff;
                 (_template, _diff) = _replaceInTemplate(
                     _template,
@@ -85,7 +95,7 @@ contract JB721StakingUriResolver {
                 continue;
             }
 
-            if (_indentifier.eq(GRADIENT_COLOR_C)) {
+            if (_identifier.eq(GRADIENT_COLOR_C)) {
                 int256 _diff;
                 (_template, _diff) = _replaceInTemplate(
                     _template,
@@ -98,7 +108,7 @@ contract JB721StakingUriResolver {
                 continue;
             }
             
-            if (_indentifier.eq(TEXT_COLOR)) {
+            if (_identifier.eq(TEXT_COLOR)) {
                 int256 _diff;
                 (_template, _diff) = _replaceInTemplate(
                     _template,
@@ -111,7 +121,7 @@ contract JB721StakingUriResolver {
                 continue;
             }
 
-            if (_indentifier.eq(TEXT_SECTION)) {
+            if (_identifier.eq(TEXT_SECTION)) {
                 int256 _diff;
                 (_template, _diff) = _replaceInTemplate(
                     _template,

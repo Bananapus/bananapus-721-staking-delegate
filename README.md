@@ -5,6 +5,14 @@ Install dependencies (forge tests, Juice-contracts-V3, OZ) via `forge install &&
 
 Use this template as a starting point, do not push straight on main, rather create a new branch and open a PR - your reviewer will love you for this.
 
+# Generate an SVG
+
+use `forge script script/GenerateTierSVG.sol`, the SVG will be output to the path as defined in the script file (default: `./out/image.svg"`)
+
+
+
+
+
 # Usage
 use `yarn test` to run tests
 
