@@ -82,7 +82,7 @@ contract EmptyTest_Fork is Test {
         ).deployStakingProject(
             JBProjectMetadata({content: '', domain: 0}),
             stakingToken,
-            IJBTokenUriResolver(address(0)),
+            IJB721TokenUriResolver(address(0)),
             "Juicebox Staking Test",
             "JST",
             "",

@@ -24,7 +24,7 @@ contract DelegateTest_Unit is Test {
     IJBSingleTokenPaymentTerminalStore _terminalStore =
         IJBSingleTokenPaymentTerminalStore(_mockContract("jb_terminal_store"));
     IJBSplitsStore _splitStore = IJBSplitsStore(_mockContract("jb_split_store"));
-    IJBTokenUriResolver _resolver = IJBTokenUriResolver(_mockContract("jb_token_resolver"));
+    IJB721TokenUriResolver _resolver = IJB721TokenUriResolver(_mockContract("jb_token_resolver"));
     IJBOperatorStore _operatorStore = IJBOperatorStore(_mockContract("jb_operator_store"));
     IJBProjects _projects = IJBProjects(_mockContract("jb_projects"));
     JBERC20TerminalDeployer _terminalDeployer = JBERC20TerminalDeployer(_mockContract("jb_terminal_deployer"));
@@ -591,7 +591,7 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         uint256 _projectId,
         IERC20 _stakingToken,
         IJBDirectory _directory,
-        IJBTokenUriResolver _uriResolver,
+        IJB721TokenUriResolver _uriResolver,
         string memory _name,
         string memory _symbol,
         string memory _contractURI,

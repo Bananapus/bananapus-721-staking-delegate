@@ -60,7 +60,7 @@ contract JB721StakingDelegateDeployer {
     function deployStakingProject(
         JBProjectMetadata memory _projectMetadata,
         IERC20Metadata _stakingToken,
-        IJBTokenUriResolver _uriResolver,
+        IJB721TokenUriResolver _uriResolver,
         string memory _name,
         string memory _symbol,
         string memory _contractURI,
@@ -111,7 +111,7 @@ contract JB721StakingDelegateDeployer {
     function deployDelegate(
         uint256 _projectId,
         IERC20Metadata _stakingToken,
-        IJBTokenUriResolver _uriResolver,
+        IJB721TokenUriResolver _uriResolver,
         string memory _name,
         string memory _symbol,
         string memory _contractURI,

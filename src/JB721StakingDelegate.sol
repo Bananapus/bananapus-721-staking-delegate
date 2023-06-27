@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.16;
 
-import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBTokenUriResolver.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
@@ -70,7 +69,7 @@ contract JB721StakingDelegate is
      * @notice
      *   The contract that stores and manages the NFT's data.
      */
-    IJBTokenUriResolver public immutable uriResolver;
+    IJB721TokenUriResolver public immutable uriResolver;
 
     /**
      * @notice
@@ -261,7 +260,7 @@ contract JB721StakingDelegate is
         uint256 _projectId,
         IERC20 _stakingToken,
         IJBDirectory _directory,
-        IJBTokenUriResolver _uriResolver,
+        IJB721TokenUriResolver _uriResolver,
         string memory _name,
         string memory _symbol,
         string memory _contractURI,
@@ -305,7 +304,7 @@ contract JB721StakingDelegate is
     function tokenURI(uint256 _tokenId) public view override returns (string memory) {
         // If a token URI resolver is provided, use it to resolve the token URI.
         if (address(uriResolver) != address(0)) {
-            return uriResolver.getUri(_tokenId);
+            return uriResolver.tokenUriOf(address(this), _tokenId);
         }
 
         // Return the token URI for the token's tier.
