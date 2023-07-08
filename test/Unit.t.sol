@@ -6,6 +6,9 @@ import "./utils/DSTestFull.sol";
 
 import "../src/JB721StakingDelegate.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
+import "../src/distributor/JB721StakingDistributor.sol";
+
+import {ERC20, IERC20} from "lib/bananapus-distributor/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract DelegateTest_Unit is Test {
     using stdStorage for StdStorage;
@@ -401,6 +404,56 @@ contract DelegateTest_Unit is Test {
         assertEq(_tiers.length, 45);
     }
 
+    function testDistributor() public {
+        uint256 _periodDurationBlocks = 100;
+        uint256 _vestingDuration = 12;
+        uint256 _amountToDistribute = 10 ether;
+
+        TestERC20 _token = new TestERC20();
+
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        JB721StakingDistributor _distributor = new JB721StakingDistributor(_delegate, _periodDurationBlocks, _vestingDuration);
+
+        //
+        address _beneficiary = address(0xba5ed);
+
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        // Send some tokens to be distributed to the distributor
+        _token.ForTest_mintTo(_amountToDistribute, address(_distributor));
+
+        IERC20[] memory tokens = new IERC20[](1);
+        tokens[0] = IERC20(_token);
+
+        uint256[] memory nftIds = new uint256[](1);
+        nftIds[0] = _tokenId;
+
+        // You can't claim in the same block that the cycle starts
+        vm.roll(block.number + 1);
+
+        // Do a claim with the NFTs on the tokens
+        vm.prank(_beneficiary);
+        _distributor.claim(nftIds, tokens);
+
+        uint256 _vestedCycle = _distributor.currentCycle() + _vestingDuration;
+
+        // Calculate in what block the vesting is done, then forward to thet cycle
+        vm.roll(
+            _distributor.cycleStartBlock(_vestedCycle)
+        );
+
+        // Collect the tokens
+        vm.prank(_beneficiary);
+        _distributor.collect(nftIds, tokens, _vestedCycle);
+
+        // In this test the user should receive the full amount, since its the only person that holds the tokens
+        assertEq(
+            _token.balanceOf(_beneficiary),
+            _amountToDistribute
+        );
+    }
+
     //*********************************************************************//
     // ----------------------------- Helpers ----------------------------- //
     //*********************************************************************//
@@ -640,5 +693,13 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
 
     function ForTest_getCost(uint16 _tierId) external view returns (uint256 _minStake) {
         return _getTierMinStake(_tierId);
+    }
+}
+
+contract TestERC20 is ERC20 {
+    constructor () ERC20( "testToken", "TEST") {}
+
+    function ForTest_mintTo(uint256 _amount, address _beneficiary) external {
+        _mint(_beneficiary, _amount);
     }
 }

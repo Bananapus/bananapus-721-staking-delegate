@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import "../src/JBERC20TerminalDeployer.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
+import "../src/distributor/JB721StakingDistributor.sol";
 
 import "@jbx-protocol/juice-contracts-v3/contracts/JBERC20PaymentTerminal.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
