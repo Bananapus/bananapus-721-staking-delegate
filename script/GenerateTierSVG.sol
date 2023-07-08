@@ -22,7 +22,7 @@ contract DefaultSVGResolverTest is Test {
 
     function run() public {
         // The tier ID to generate for
-        uint256 _tier = 53;
+        uint256 _tier = 10;
 
         // Generate the URI
         string memory _uri = resolver.tokenUri(_tier * 1_000_000_000);

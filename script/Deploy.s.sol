@@ -53,7 +53,7 @@ contract DeployGoerli is Script {
         delegateDeployer.deployStakingProject(
             JBProjectMetadata({content: 'bafkreig2nxunu6oxhmj6grsam5e7rzs5l6geulbcdukbila43dq2gyofny', domain: 0}),
             stakingToken,
-            IJBTokenUriResolver(address(0)),
+            IJB721TokenUriResolver(address(0)),
             "WETH Governance",
             "WETHDAO",
             "",
