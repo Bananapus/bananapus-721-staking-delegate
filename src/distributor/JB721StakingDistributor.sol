@@ -17,6 +17,17 @@ contract JB721StakingDistributor is JBDistributor {
         delegate = _delegate;
     }
 
+    /**
+        @notice
+        @param _tokenID the token id to check for
+        @param _user the user to check if it may claim
+        @return _userMayClaimToken
+    */
+    function _canClaim(uint256 _tokenID, address _user) internal view virtual override returns (bool _userMayClaimToken) {
+        address owner = delegate.ownerOf(_tokenID);
+        return (owner == _user || delegate.isApprovedForAll(owner, _user) || delegate.getApproved(_tokenID) == _user);
+    }
+
     function _tokenStake(uint256 _tokenId) internal view virtual override returns (uint256 _tokenStakeAmount) {
         return delegate.stakingTokenBalance(_tokenId);
     }
