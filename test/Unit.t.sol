@@ -8,7 +8,7 @@ import "../src/JB721StakingDelegate.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 import "../src/distributor/JB721StakingDistributor.sol";
 
-import {ERC20, IERC20} from "lib/bananapus-distributor/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "lib/bananapus-distributor/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract DelegateTest_Unit is Test {
     using stdStorage for StdStorage;
