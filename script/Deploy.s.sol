@@ -141,7 +141,7 @@ contract Claim is Script {
         uint256[] memory nftIds = new uint256[](1);
         nftIds[0] = 1;
 
-        _distributor.claim(nftIds, tokens);
+        _distributor.beginVesting(nftIds, tokens);
 
         vm.stopBroadcast();
 
@@ -159,8 +159,8 @@ contract Collect is Script {
 
         vm.startBroadcast();
 
-        _distributor.currentCycle();
-        _distributor.cycleStartBlock(10);
+        _distributor.currentRound();
+        _distributor.roundStartBlock(10);
 
          // Perform the claim
         IERC20[] memory tokens = new IERC20[](1);
@@ -169,7 +169,7 @@ contract Collect is Script {
         uint256[] memory nftIds = new uint256[](1);
         nftIds[0] = 1;
 
-        _distributor.collect(nftIds, tokens, 10);
+        _distributor.collectVestedRewards(nftIds, tokens, 10);
 
         vm.stopBroadcast();
 

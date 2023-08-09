@@ -434,18 +434,18 @@ contract DelegateTest_Unit is Test {
 
         // Do a claim with the NFTs on the tokens
         vm.prank(_beneficiary);
-        _distributor.claim(nftIds, tokens);
+        _distributor.beginVesting(nftIds, tokens);
 
-        uint256 _vestedCycle = _distributor.currentCycle() + _vestingDuration;
+        uint256 _vestedCycle = _distributor.currentRound() + _vestingDuration;
 
         // Calculate in what block the vesting is done, then forward to thet cycle
         vm.roll(
-            _distributor.cycleStartBlock(_vestedCycle)
+            _distributor.roundStartBlock(_vestedCycle)
         );
 
         // Collect the tokens
         vm.prank(_beneficiary);
-        _distributor.collect(nftIds, tokens, _vestedCycle);
+        _distributor.collectVestedRewards(nftIds, tokens, _vestedCycle);
 
         // In this test the user should receive the full amount, since its the only person that holds the tokens
         assertEq(
