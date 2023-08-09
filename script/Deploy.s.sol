@@ -116,6 +116,7 @@ contract DeployGoerli is Script {
         console2.log("token", address(stakingToken));
         console2.log("terminalDeployer", address(terminalDeployer));
         console2.log("delegateDeployer", address(delegateDeployer));
+        console2.log("staking project ID", _projectID);
         // console2.log("tokenId", nftIds[0]);
     }
 
