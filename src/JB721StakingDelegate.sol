@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IJB721StakingDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegate.sol";
 import "./interfaces/IJBTiered721MinimalDelegateStore.sol";
+import "./interfaces/IBPLockManager.sol";
 import "./struct/JB721StakingTier.sol";
 
 contract JB721StakingDelegate is
@@ -29,6 +30,7 @@ contract JB721StakingDelegate is
     error INSUFFICIENT_VALUE();
     error OVERSPENDING();
     error INVALID_METADATA();
+    error TOKEN_LOCKED(uint256 _tokenID, IBPLockManager _manager);
 
     //*********************************************************************//
     // -------------------- private constant properties ------------------ //
@@ -54,6 +56,11 @@ contract JB721StakingDelegate is
      * @dev A mapping of staked token balances per id
      */
     mapping(uint256 => uint256) public stakingTokenBalance;
+
+    /**
+     * @dev A mapping of the registered lockmanager for each token
+     */
+    mapping(uint256 => IBPLockManager) public lockManager;
 
     /**
      * @dev A mapping of (current) voting power for the users
@@ -252,6 +259,27 @@ contract JB721StakingDelegate is
             || super.supportsInterface(_interfaceId);
     }
 
+    /**
+     * @notice
+     * The metadata URI of the provided token ID.
+     *
+     * @dev
+     * Defer to the tokenUriResolver if set, otherwise, use the tokenUri set with the token's tier.
+     *
+     * @param _tokenId The ID of the token to get the tier URI for.
+     *
+     * @return The token URI corresponding with the tier or the tokenUriResolver URI.
+     */
+    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
+        // If a token URI resolver is provided, use it to resolve the token URI.
+        if (address(uriResolver) != address(0)) {
+            return uriResolver.tokenUriOf(address(this), _tokenId);
+        }
+
+        // Return the token URI for the token's tier.
+        return JBIpfsDecoder.decode(baseURI, encodedIPFSUri);
+    }
+
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
@@ -290,25 +318,28 @@ contract JB721StakingDelegate is
         JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
     }
 
-    /**
-     * @notice
-     * The metadata URI of the provided token ID.
-     *
-     * @dev
-     * Defer to the tokenUriResolver if set, otherwise, use the tokenUri set with the token's tier.
-     *
-     * @param _tokenId The ID of the token to get the tier URI for.
-     *
-     * @return The token URI corresponding with the tier or the tokenUriResolver URI.
-     */
-    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
-        // If a token URI resolver is provided, use it to resolve the token URI.
-        if (address(uriResolver) != address(0)) {
-            return uriResolver.tokenUriOf(address(this), _tokenId);
-        }
+    //*********************************************************************//
+    // ---------------------- external transactions ---------------------- //
+    //*********************************************************************//
 
-        // Return the token URI for the token's tier.
-        return JBIpfsDecoder.decode(baseURI, encodedIPFSUri);
+    function setLockManager(uint256 _tokenId, IBPLockManager _newLockManager) external {
+        // Make sure the sender is allowed to perform this action
+        if(!_isApprovedOrOwner(msg.sender, _tokenId)) revert UNAUTHORIZED_TOKEN(_tokenId);
+
+        // Get the lockmManager for this tokenId
+        IBPLockManager _lockManager = lockManager[_tokenId];
+        
+        // If there is already a lockManager set, check to see if the token is unlocked
+        // TODO: Should we stay checking the code length here, or should we always call `register` and use that as a sanity check
+        if( 
+            address(_lockManager) != address (0) &&
+            address(_lockManager).code.length != 0 &&
+            !_lockManager.isUnlocked(address(this), _tokenId)
+        ) revert TOKEN_LOCKED(_tokenId, _lockManager);
+
+        lockManager[_tokenId] = _newLockManager;
+
+        // TODO: emit event?
     }
 
     //*********************************************************************//
@@ -361,6 +392,8 @@ contract JB721StakingDelegate is
                 // Mint the specified tiers with the custom stake amount
                 _leftoverAmount =
                     _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
+
+                // TODO: Add optional `IBPLockManager.onRegistration(..)` call for single transaction locking
             } else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
@@ -608,6 +641,34 @@ contract JB721StakingDelegate is
     function tierIdOfToken(uint256 _tokenId) public pure returns (uint256) {
         return _tokenId / _ONE_BILLION;
     }
+
+    /**
+     * @notice handles checking if a token is locked or not
+     */
+     function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
+        // We do not need to check anything on mint
+        if (from == address(0)) return; 
+
+        // Get the lockmManager for this tokenId
+        IBPLockManager _lockManager = lockManager[tokenId];
+
+        // TODO: Should we check code length of the lockManager here, or should we rely on a check when setting the lockManager
+
+        // If there is none, then any transfer/burn is fine
+        if (address(_lockManager) == address(0)) return; 
+
+        // `to` can only be the zero address when being called through burn, 
+        // so this is a redemption or voluntary burn
+        // NOTICE: unsafe call
+        if (to == address(0)) _lockManager.onRedeem(tokenId);
+
+        // Check if the user is able to move the token or not
+        // NOTICE: unsafe call
+        if(!_lockManager.isUnlocked(address(this), tokenId)) revert TOKEN_LOCKED(tokenId, _lockManager);
+
+        // Delete the lockManager, since this token now (probably) belongs to some other user
+        delete lockManager[tokenId];
+     }
 
     /**
      * @notice
