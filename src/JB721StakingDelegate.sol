@@ -340,8 +340,8 @@ contract JB721StakingDelegate is
         // If there is already a lockManager set, check to see if the token is unlocked
         // TODO: Should we stay checking the code length here, or should we always call `register` and use that as a sanity check
         if( 
-            address(_lockManager) == address (0) ||
-            address(_lockManager).code.length == 0 ||
+            address(_lockManager) != address (0) &&
+            address(_lockManager).code.length != 0 &&
             !_lockManager.isUnlocked(address(this), _tokenId)
         ) revert TOKEN_LOCKED(_tokenId, _lockManager);
 

@@ -16,6 +16,7 @@ contract DelegateTest_Unit is Test {
     error INSUFFICIENT_VALUE();
     error OVERSPENDING();
     error STAKE_NOT_ENOUGH_FOR_TIER(uint16 _tier, uint256 _minAmount, uint256 _providedAmount);
+    error TOKEN_LOCKED(uint256 _tokenID, IBPLockManager _manager);
 
     uint256 _projectId = 103;
     string _baseUri;
@@ -454,6 +455,190 @@ contract DelegateTest_Unit is Test {
         );
     }
 
+    function testLockManager_configure(bool _alreadyHasLockManager) public {
+        address _beneficiary = address(0xba5ed);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        MockLockManager _lockManager = new MockLockManager();
+
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        // If bool is set we make it so there is already a lockManager set
+        if(_alreadyHasLockManager) {
+            MockLockManager _oldLockManager = new MockLockManager();
+            _delegate.ForTest_setLockManager(_tokenId, _oldLockManager);
+
+            // It should perform a call to see if the token is indeed unlocked
+            vm.expectCall(
+                address(_oldLockManager),
+                abi.encodeCall(_oldLockManager.isUnlocked, (address(_delegate), _tokenId))
+            );
+        }
+
+        // Set the lock manager
+        vm.prank(_beneficiary);
+        _delegate.setLockManager(_tokenId, _lockManager);
+
+        // Check that it updated
+        assertEq(
+            address(_delegate.lockManager(_tokenId)),
+            address(_lockManager)
+        );
+
+        // TODO: check emit
+    }
+
+     function testLockManager_configureLocked_reverts() public {
+        address _beneficiary = address(0xba5ed);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        MockLockManager _lockManager = new MockLockManager();
+        MockLockManager _newLockManager = new MockLockManager();
+
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        // Set the old lockManager and configure it to report as locked
+        _delegate.ForTest_setLockManager(_tokenId, _lockManager);
+        _lockManager.ForTest_setLocked(_tokenId, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager)
+        );
+
+        // Attempt to change the lockManager
+        vm.prank(_beneficiary);
+        _delegate.setLockManager(_tokenId, _newLockManager);
+    }
+
+    function testLockManager_transferUnlocked(bool _withLockManager) public {
+        address _beneficiary = address(0xba5ed);
+        address _recipient = address(0x11111);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        if(_withLockManager) {
+            // Set the lock manager
+            MockLockManager _lockManager = new MockLockManager();
+            _delegate.ForTest_setLockManager(_tokenId, _lockManager);
+
+            // It should perform a call to see if the token is indeed unlocked
+            vm.expectCall(
+                address(_lockManager),
+                abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
+            );
+        }
+
+        vm.prank(_beneficiary);
+        _delegate.transferFrom(_beneficiary, _recipient,_tokenId);
+
+        // Check that the recipient is now the owner
+        assertEq(
+            _delegate.ownerOf(_tokenId),
+            _recipient
+        );
+
+        // TODO: check emit
+    }
+
+    function testLockManager_transferLocked_reverts() public {
+        address _beneficiary = address(0xba5ed);
+        address _recipient = address(0x11111);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        MockLockManager _lockManager = new MockLockManager();
+
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        // Set the lock manager
+        vm.prank(_beneficiary);
+        _delegate.setLockManager(_tokenId, _lockManager);
+
+        // Lock the token
+        _lockManager.ForTest_setLocked(_tokenId, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager)
+        );
+
+        vm.prank(_beneficiary);
+        _delegate.transferFrom(_beneficiary, _recipient,_tokenId);
+    }
+
+    function testLockManager_burnUnlocked(bool _withLockManager) public {
+        address _beneficiary = address(0xba5ed);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        if(_withLockManager) {
+            // Set the lock manager
+            MockLockManager _lockManager = new MockLockManager();
+            _delegate.ForTest_setLockManager(_tokenId, _lockManager);
+
+            // It should perform a onRedeem hook call
+            vm.expectCall(
+                address(_lockManager),
+                abi.encodeCall(_lockManager.onRedeem, (_tokenId, _beneficiary))
+            );
+
+            // It should perform a call to see if the token is indeed unlocked
+            vm.expectCall(
+                address(_lockManager),
+                abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
+            );
+        }
+
+        _delegate.ForTest_burn(_tokenId);
+    }
+
+    function testLockManager_burnLocked_reverts() public {
+        address _beneficiary = address(0xba5ed);
+
+        // Deploy the delegate
+        JB721StakingDelegateHarness _delegate = _deployDelegate();
+        
+        // Mint a token
+        uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
+
+        // Set the lock manager
+        MockLockManager _lockManager = new MockLockManager();
+        _delegate.ForTest_setLockManager(_tokenId, _lockManager);
+        
+        // Lock the token
+        _lockManager.ForTest_setLocked(_tokenId, true);
+
+        // It should perform a onRedeem hook call
+        vm.expectCall(
+            address(_lockManager),
+            abi.encodeCall(_lockManager.onRedeem, (_tokenId, _beneficiary))
+        );
+
+        // It should perform a call to see if the token is indeed unlocked
+        vm.expectCall(
+            address(_lockManager),
+            abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager)
+        );
+    
+        _delegate.ForTest_burn(_tokenId);
+    }
+
     //*********************************************************************//
     // ----------------------------- Helpers ----------------------------- //
     //*********************************************************************//
@@ -668,6 +853,14 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
         )
     {}
 
+    function ForTest_setLockManager(uint256 _tokenId, IBPLockManager _lockManager) external {
+        lockManager[_tokenId] = _lockManager;
+    }
+
+    function ForTest_burn(uint256 _tokenId) external {
+        _burn(_tokenId);
+    }
+
     function ForTest_mintTo(uint16 _tierId, uint256 _stakingAmountWorth, address _beneficiary)
         external
         returns (uint256 _tokenID)
@@ -701,5 +894,31 @@ contract TestERC20 is ERC20 {
 
     function ForTest_mintTo(uint256 _amount, address _beneficiary) external {
         _mint(_beneficiary, _amount);
+    }
+}
+
+contract MockLockManager is IBPLockManager {
+
+    mapping(uint256 _tokenId => bool) internal locked;
+
+    function ForTest_setLocked(uint256 _tokenId, bool _state) external {
+        locked[_tokenId] = _state;
+    }
+
+    // Interface methods
+    function onRegistration(
+        address,
+        address,
+        uint256,
+        bytes calldata
+    ) external override {}
+
+    function onRedeem(uint256, address) external override {}
+
+    function isUnlocked(
+        address,
+        uint256 _id
+    ) external view override returns (bool) {
+        return !locked[_id];
     }
 }
