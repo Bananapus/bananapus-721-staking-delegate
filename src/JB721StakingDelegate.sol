@@ -213,6 +213,14 @@ contract JB721StakingDelegate is
         return _getTotalSupply();
     }
 
+    /**
+     * @notice
+     * Helper function to check if a spender has access to manage a tokenId
+     */
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
+        return _isApprovedOrOwner(_spender, _tokenId);
+    }
+
     //*********************************************************************//
     // -------------------------- public views --------------------------- //
     //*********************************************************************//
@@ -332,8 +340,8 @@ contract JB721StakingDelegate is
         // If there is already a lockManager set, check to see if the token is unlocked
         // TODO: Should we stay checking the code length here, or should we always call `register` and use that as a sanity check
         if( 
-            address(_lockManager) != address (0) &&
-            address(_lockManager).code.length != 0 &&
+            address(_lockManager) == address (0) ||
+            address(_lockManager).code.length == 0 ||
             !_lockManager.isUnlocked(address(this), _tokenId)
         ) revert TOKEN_LOCKED(_tokenId, _lockManager);
 
@@ -660,7 +668,7 @@ contract JB721StakingDelegate is
         // `to` can only be the zero address when being called through burn, 
         // so this is a redemption or voluntary burn
         // NOTICE: unsafe call
-        if (to == address(0)) _lockManager.onRedeem(tokenId);
+        if (to == address(0)) _lockManager.onRedeem(tokenId, from);
 
         // Check if the user is able to move the token or not
         // NOTICE: unsafe call
