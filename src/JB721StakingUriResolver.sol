@@ -5,8 +5,9 @@ import "lib/sstore2/contracts/SSTORE2.sol";
 import "lib/solady/src/utils/LibString.sol";
 import {Base64} from "lib/solady/src/utils/Base64.sol";
 import {Color, LibColor, newColorFromRGB, newColorFromRGBString} from "lib/solcolor/src/Color.sol";
+import {IJB721TokenUriResolver} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol";
 
-contract JB721StakingUriResolver {
+contract JB721StakingUriResolver is IJB721TokenUriResolver {
     using LibString for string;
     using LibString for uint256;
     using LibColor for Color;
@@ -47,7 +48,8 @@ contract JB721StakingUriResolver {
         SVG_TEMPLATE_INDICES_POINTER = SSTORE2.write(bytes(abi.encode(_indices)));
     }
 
-    function tokenUri(uint256 tokenId) external view returns (string memory) {
+    function tokenUriOf(address, uint256 tokenId) external view returns (string memory) {
+        // TODO: Also use `_nft` as a source of randomeness
         string memory _template = _loadTemplate();
 
         // Perform your template manipulations

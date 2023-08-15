@@ -25,7 +25,7 @@ contract DefaultSVGResolverTest is Test {
         uint256 _tier = 10;
 
         // Generate the URI
-        string memory _uri = resolver.tokenUri(_tier * 1_000_000_000);
+        string memory _uri = resolver.tokenUriOf(address(0), _tier * 1_000_000_000);
         // Get the base64 from the JSON
         _uri = _uri.slice(_uri.indexOf(",") + 1, bytes(_uri).length);
 
