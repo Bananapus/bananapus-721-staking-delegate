@@ -514,6 +514,13 @@ contract DelegateTest_Unit is Test {
         _delegate.setLockManager(_tokenId, _newLockManager);
     }
 
+    function testInterface() public {
+        assertEq(
+            bytes4(0),
+            type(IJB721Delegate).interfaceId
+        );
+    }
+
     function testLockManager_transferUnlocked(bool _withLockManager) public {
         address _beneficiary = address(0xba5ed);
         address _recipient = address(0x11111);

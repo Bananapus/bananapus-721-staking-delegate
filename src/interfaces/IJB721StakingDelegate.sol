@@ -2,9 +2,19 @@
 pragma solidity ^0.8.16;
 
 import "./IJB721StakingDelegateStore.sol";
+import "./IBPLockManager.sol";
 
 interface IJB721StakingDelegate {
-// function codeOrigin() external view returns (address);
+    function isApprovedOrOwner(
+        address _spender,
+        uint256 _tokenId
+    ) external view returns (bool _isAllowed);
 
-// function store() external view returns (IJB721StakingDelegateStore);
+    function stakingTokenBalance(
+        uint256 _tokenId
+    ) external view returns (uint256 _amount);
+
+    function lockManager(
+        uint256 _tokenID
+    ) external view returns (IBPLockManager _lockManager);
 }
