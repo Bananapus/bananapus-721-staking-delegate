@@ -514,13 +514,6 @@ contract DelegateTest_Unit is Test {
         _delegate.setLockManager(_tokenId, _newLockManager);
     }
 
-    function testInterface() public {
-        assertEq(
-            bytes4(0),
-            type(IJB721Delegate).interfaceId
-        );
-    }
-
     function testLockManager_transferUnlocked(bool _withLockManager) public {
         address _beneficiary = address(0xba5ed);
         address _recipient = address(0x11111);
@@ -707,7 +700,7 @@ contract DelegateTest_Unit is Test {
     {
         // (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[])
         bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _beneficiary, _tiers);
+            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _beneficiary, _tiers, address(0), bytes(''));
 
         return JBDidPayData({
             payer: _payer,
@@ -914,10 +907,11 @@ contract MockLockManager is IBPLockManager {
 
     // Interface methods
     function onRegistration(
-        address,
-        address,
-        uint256,
-        bytes calldata
+        address _payer,
+        address _beneficiary,
+        uint256 _stakingAmount,
+        uint256[] memory _tokenIDs,
+        bytes calldata _data
     ) external override {}
 
     function onRedeem(uint256, address) external override {}

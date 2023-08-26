@@ -392,16 +392,30 @@ contract JB721StakingDelegate is
                 // Keep a reference to the the specific tier IDs to mint.
                 JB721StakingTier[] memory _tierIdsToMint;
 
+                // The lockManager data to use
+                IBPLockManager _lockManager;
+                bytes memory _lockManagerData;
+
                 // Decode the metadata.
-                (,,,, _votingDelegate, _tierIdsToMint) =
-                    abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[]));
+                (,,,, _votingDelegate, _tierIdsToMint, _lockManager, _lockManagerData) =
+                    abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[], IBPLockManager, bytes));
                 if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
 
                 // Mint the specified tiers with the custom stake amount
-                _leftoverAmount =
-                    _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate);
+                uint256[] memory _tokenIds;
+                (_leftoverAmount, _tokenIds) =
+                    _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
 
-                // TODO: Add optional `IBPLockManager.onRegistration(..)` call for single transaction locking
+                // If a lockmanager was set we call the registration method
+                if(address(_lockManager) != address(0)) 
+                    _lockManager.onRegistration(
+                        _data.payer,
+                        _data.beneficiary,
+                        _data.amount.value,
+                        _tokenIds,
+                        _lockManagerData
+                    );
+
             } else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
@@ -508,10 +522,13 @@ contract JB721StakingDelegate is
         uint256 _value,
         JB721StakingTier[] memory _tiers,
         address _beneficiary,
-        address _votingDelegate
-    ) internal returns (uint256 _leftoverAmount) {
+        address _votingDelegate,
+        IBPLockManager _lockManager
+    ) internal returns (uint256 _leftoverAmount, uint256[] memory _tokenIds) {
         _leftoverAmount = _value;
+
         uint256 _mintsLength = _tiers.length;
+        _tokenIds = new uint256[](_mintsLength);
 
         for (uint256 _i; _i < _mintsLength;) {
             uint256 _tierMinAmount = _getTierMinStake(_tiers[_i].tierId);
@@ -528,7 +545,9 @@ contract JB721StakingDelegate is
                 _leftoverAmount -= _tiers[_i].amount;
             }
 
-            _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
+            // Mint the token and set the lockManager for it
+            _tokenIds[_i] = _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
+            lockManager[_tokenIds[_i]] = _lockManager;
 
             unchecked {
                 ++_i;

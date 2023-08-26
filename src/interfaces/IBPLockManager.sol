@@ -7,17 +7,18 @@ pragma solidity ^0.8.16;
  * this interface contains the methods that are required by `JB721StakingDelegate`.
  */
 interface IBPLockManager {
-    /**
-     * @notice hook (optionally) called upon registration to simplify UX
+   /**
+     * @notice hook that (optionally) gets called upon registration as a lockManager.
      * @param _payer the person who send the transaction and paid for the staked position
      * @param _beneficiary the person who received the staked position
-     * @param _tokenID the id of the token being locked
-     * @param _data data regarding the lock as send by the user, can be any data.
+     * @param _tokenIDs The tokenID that got registered.
+     * @param _data data regarding the lock as send by the user
      */
     function onRegistration(
         address _payer,
         address _beneficiary,
-        uint256 _tokenID,
+        uint256 _stakingAmount,
+        uint256[] memory _tokenIDs,
         bytes calldata _data
     ) external;
 
