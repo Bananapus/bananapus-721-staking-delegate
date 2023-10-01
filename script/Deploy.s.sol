@@ -7,6 +7,12 @@ import "../src/JBERC20TerminalDeployer.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 import "../src/distributor/JB721StakingDistributor.sol";
 
+import "forge-std/Test.sol";
+import {Base64} from "lib/solady/src/utils/Base64.sol";
+import "lib/solady/src/utils/LibString.sol";
+
+import "../src/JB721StakingUriResolver.sol";
+
 import {ERC20, IERC20} from "lib/bananapus-distributor/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {WETH} from "lib/solady/src/tokens/WETH.sol";
 
@@ -37,6 +43,7 @@ contract DeployGoerli is Script {
     uint256 constant BLOCK_TIME = 12 seconds;
     uint256 constant VESTING_CYCLE_DURATION = 1 hours / BLOCK_TIME;
     uint256 constant VESTING_CYCLES_UNIL_RELEASED = 3;
+    string constant SVG_PATH = "./template.svg";
 
     function setUp() public {}
 
@@ -49,6 +56,11 @@ contract DeployGoerli is Script {
         _tierIds[1] = 0;
 
         vm.startBroadcast();
+
+        string memory _template = vm.readFile(SVG_PATH);
+        address _templatePointer = SSTORE2.write(bytes(_template));
+
+        JB721StakingUriResolver _resolver = new JB721StakingUriResolver(_templatePointer);
 
         // Deploy the terminal deployer
         terminalDeployer = new JBERC20TerminalDeployer();
@@ -69,7 +81,7 @@ contract DeployGoerli is Script {
         (uint256 _projectID ,IJBPayoutRedemptionPaymentTerminal _stakingTerminal, JB721StakingDelegate _newDelegate) = delegateDeployer.deployStakingProject(
             JBProjectMetadata({content: 'bafkreig2nxunu6oxhmj6grsam5e7rzs5l6geulbcdukbila43dq2gyofny', domain: 0}),
             IERC20Metadata(address(stakingToken)),
-            IJB721TokenUriResolver(address(0)),
+            IJB721TokenUriResolver(_resolver),
             "WETH Governance",
             "WETHDAO",
             "",
