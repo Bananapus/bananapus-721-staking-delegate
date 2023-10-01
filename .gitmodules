@@ -1,7 +1,22 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-	branch = v1.3.0
 [submodule "lib/ds-test"]
 	path = lib/ds-test
 	url = https://github.com/dapphub/ds-test
+[submodule "lib/prb-test"]
+	path = lib/prb-test
+	url = https://github.com/PaulRBerg/prb-test
+[submodule "lib/solady"]
+	path = lib/solady
+	url = https://github.com/Vectorized/solady
+[submodule "lib/solcolor"]
+	path = lib/solcolor
+	url = https://github.com/xBA5ED/solcolor
+[submodule "lib/sstore2"]
+	path = lib/sstore2
+	url = https://github.com/0xsequence/sstore2
+[submodule "lib/bananapus-distributor"]
+	path = lib/bananapus-distributor
+	url = https://github.com/Bananapus/bananapus-distributor
+	branch = juice-distributor-alt

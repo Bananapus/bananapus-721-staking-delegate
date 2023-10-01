@@ -1,6 +1,9 @@
 @jbx-protocol/=node_modules/@jbx-protocol/
-@openzeppelin/=node_modules/@openzeppelin/
 @paulrberg/=node_modules/@paulrberg/
 prb-math/=node_modules/prb-math/
 ds-test/=lib/ds-test/src/
 forge-std/=lib/forge-std/src/
+@prb/test/=lib/prb-test/src/
+
+comment=Line below is a temporary fix to foundry 2.0 issue (https://github.com/foundry-rs/foundry/issues/5290)
+@openzeppelin/=lib/bananapus-distributor/lib/openzeppelin-contracts/
