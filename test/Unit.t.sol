@@ -51,7 +51,9 @@ contract DelegateTest_Unit is Test {
     }
 
     function testDeploy() public {
-        _deployer.deployDelegate(_projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0"), 10 ** 18, 59);
+        _deployer.deployDelegate(
+            _projectId, _stakingToken, _resolver, "JBXStake", "STAKE", "", _baseUri, bytes32("0"), 10 ** 18, 59
+        );
     }
 
     function testMint_customStakeAmount(address _payer, uint16 _tierId, uint96 _customAdditionalStakeAmount) public {
@@ -413,7 +415,8 @@ contract DelegateTest_Unit is Test {
         TestERC20 _token = new TestERC20();
 
         JB721StakingDelegateHarness _delegate = _deployDelegate();
-        JB721StakingDistributor _distributor = new JB721StakingDistributor(_delegate, _periodDurationBlocks, _vestingDuration);
+        JB721StakingDistributor _distributor =
+            new JB721StakingDistributor(_delegate, _periodDurationBlocks, _vestingDuration);
 
         //
         address _beneficiary = address(0xba5ed);
@@ -440,19 +443,14 @@ contract DelegateTest_Unit is Test {
         uint256 _vestedCycle = _distributor.currentRound() + _vestingDuration;
 
         // Calculate in what block the vesting is done, then forward to thet cycle
-        vm.roll(
-            _distributor.roundStartBlock(_vestedCycle)
-        );
+        vm.roll(_distributor.roundStartBlock(_vestedCycle));
 
         // Collect the tokens
         vm.prank(_beneficiary);
         _distributor.collectVestedRewards(nftIds, tokens, _vestedCycle);
 
         // In this test the user should receive the full amount, since its the only person that holds the tokens
-        assertEq(
-            _token.balanceOf(_beneficiary),
-            _amountToDistribute
-        );
+        assertEq(_token.balanceOf(_beneficiary), _amountToDistribute);
     }
 
     function testLockManager_configure(bool _alreadyHasLockManager) public {
@@ -466,14 +464,13 @@ contract DelegateTest_Unit is Test {
         uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
 
         // If bool is set we make it so there is already a lockManager set
-        if(_alreadyHasLockManager) {
+        if (_alreadyHasLockManager) {
             MockLockManager _oldLockManager = new MockLockManager();
             _delegate.ForTest_setLockManager(_tokenId, _oldLockManager);
 
             // It should perform a call to see if the token is indeed unlocked
             vm.expectCall(
-                address(_oldLockManager),
-                abi.encodeCall(_oldLockManager.isUnlocked, (address(_delegate), _tokenId))
+                address(_oldLockManager), abi.encodeCall(_oldLockManager.isUnlocked, (address(_delegate), _tokenId))
             );
         }
 
@@ -482,15 +479,12 @@ contract DelegateTest_Unit is Test {
         _delegate.setLockManager(_tokenId, _lockManager);
 
         // Check that it updated
-        assertEq(
-            address(_delegate.lockManager(_tokenId)),
-            address(_lockManager)
-        );
+        assertEq(address(_delegate.lockManager(_tokenId)), address(_lockManager));
 
         // TODO: check emit
     }
 
-     function testLockManager_configureLocked_reverts() public {
+    function testLockManager_configureLocked_reverts() public {
         address _beneficiary = address(0xba5ed);
 
         // Deploy the delegate
@@ -505,9 +499,7 @@ contract DelegateTest_Unit is Test {
         _delegate.ForTest_setLockManager(_tokenId, _lockManager);
         _lockManager.ForTest_setLocked(_tokenId, true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager)
-        );
+        vm.expectRevert(abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager));
 
         // Attempt to change the lockManager
         vm.prank(_beneficiary);
@@ -520,30 +512,26 @@ contract DelegateTest_Unit is Test {
 
         // Deploy the delegate
         JB721StakingDelegateHarness _delegate = _deployDelegate();
-        
+
         // Mint a token
         uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
 
-        if(_withLockManager) {
+        if (_withLockManager) {
             // Set the lock manager
             MockLockManager _lockManager = new MockLockManager();
             _delegate.ForTest_setLockManager(_tokenId, _lockManager);
 
             // It should perform a call to see if the token is indeed unlocked
             vm.expectCall(
-                address(_lockManager),
-                abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
+                address(_lockManager), abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
             );
         }
 
         vm.prank(_beneficiary);
-        _delegate.transferFrom(_beneficiary, _recipient,_tokenId);
+        _delegate.transferFrom(_beneficiary, _recipient, _tokenId);
 
         // Check that the recipient is now the owner
-        assertEq(
-            _delegate.ownerOf(_tokenId),
-            _recipient
-        );
+        assertEq(_delegate.ownerOf(_tokenId), _recipient);
 
         // TODO: check emit
     }
@@ -566,12 +554,10 @@ contract DelegateTest_Unit is Test {
         // Lock the token
         _lockManager.ForTest_setLocked(_tokenId, true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager)
-        );
+        vm.expectRevert(abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager));
 
         vm.prank(_beneficiary);
-        _delegate.transferFrom(_beneficiary, _recipient,_tokenId);
+        _delegate.transferFrom(_beneficiary, _recipient, _tokenId);
     }
 
     function testLockManager_burnUnlocked(bool _withLockManager) public {
@@ -579,25 +565,21 @@ contract DelegateTest_Unit is Test {
 
         // Deploy the delegate
         JB721StakingDelegateHarness _delegate = _deployDelegate();
-        
+
         // Mint a token
         uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
 
-        if(_withLockManager) {
+        if (_withLockManager) {
             // Set the lock manager
             MockLockManager _lockManager = new MockLockManager();
             _delegate.ForTest_setLockManager(_tokenId, _lockManager);
 
             // It should perform a onRedeem hook call
-            vm.expectCall(
-                address(_lockManager),
-                abi.encodeCall(_lockManager.onRedeem, (_tokenId, _beneficiary))
-            );
+            vm.expectCall(address(_lockManager), abi.encodeCall(_lockManager.onRedeem, (_tokenId, _beneficiary)));
 
             // It should perform a call to see if the token is indeed unlocked
             vm.expectCall(
-                address(_lockManager),
-                abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
+                address(_lockManager), abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
             );
         }
 
@@ -609,33 +591,25 @@ contract DelegateTest_Unit is Test {
 
         // Deploy the delegate
         JB721StakingDelegateHarness _delegate = _deployDelegate();
-        
+
         // Mint a token
         uint256 _tokenId = _delegate.ForTest_mintTo(1, 100, _beneficiary);
 
         // Set the lock manager
         MockLockManager _lockManager = new MockLockManager();
         _delegate.ForTest_setLockManager(_tokenId, _lockManager);
-        
+
         // Lock the token
         _lockManager.ForTest_setLocked(_tokenId, true);
 
         // It should perform a onRedeem hook call
-        vm.expectCall(
-            address(_lockManager),
-            abi.encodeCall(_lockManager.onRedeem, (_tokenId, _beneficiary))
-        );
+        vm.expectCall(address(_lockManager), abi.encodeCall(_lockManager.onRedeem, (_tokenId, _beneficiary)));
 
         // It should perform a call to see if the token is indeed unlocked
-        vm.expectCall(
-            address(_lockManager),
-            abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId))
-        );
+        vm.expectCall(address(_lockManager), abi.encodeCall(_lockManager.isUnlocked, (address(_delegate), _tokenId)));
 
-        vm.expectRevert(
-            abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager)
-        );
-    
+        vm.expectRevert(abi.encodeWithSelector(TOKEN_LOCKED.selector, _tokenId, _lockManager));
+
         _delegate.ForTest_burn(_tokenId);
     }
 
@@ -699,8 +673,16 @@ contract DelegateTest_Unit is Test {
         returns (JBDidPayData memory)
     {
         // (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[])
-        bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _beneficiary, _tiers, address(0), bytes(''));
+        bytes memory _metadata = abi.encode(
+            bytes32(0),
+            bytes32(0),
+            type(IJB721StakingDelegate).interfaceId,
+            false,
+            _beneficiary,
+            _tiers,
+            address(0),
+            bytes("")
+        );
 
         return JBDidPayData({
             payer: _payer,
@@ -890,7 +872,7 @@ contract JB721StakingDelegateHarness is JB721StakingDelegate {
 }
 
 contract TestERC20 is ERC20 {
-    constructor () ERC20( "testToken", "TEST") {}
+    constructor() ERC20("testToken", "TEST") {}
 
     function ForTest_mintTo(uint256 _amount, address _beneficiary) external {
         _mint(_beneficiary, _amount);
@@ -898,7 +880,6 @@ contract TestERC20 is ERC20 {
 }
 
 contract MockLockManager is IBPLockManager {
-
     mapping(uint256 _tokenId => bool) internal locked;
 
     function ForTest_setLocked(uint256 _tokenId, bool _state) external {
@@ -916,10 +897,7 @@ contract MockLockManager is IBPLockManager {
 
     function onRedeem(uint256, address) external override {}
 
-    function isUnlocked(
-        address,
-        uint256 _id
-    ) external view override returns (bool) {
+    function isUnlocked(address, uint256 _id) external view override returns (bool) {
         return !locked[_id];
     }
 }

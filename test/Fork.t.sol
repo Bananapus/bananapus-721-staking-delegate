@@ -26,7 +26,7 @@ contract EmptyTest_Fork is Test {
     IJBSplitsStore JBSplitsStore;
     IJBProjects JBProjects;
     JB721StakingDelegate delegate;
-    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0x7A53cAA1dC4d752CAD283d039501c0Ee45719FaC); 
+    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0x7A53cAA1dC4d752CAD283d039501c0Ee45719FaC);
 
     address projectOwner = address(0x7331);
 

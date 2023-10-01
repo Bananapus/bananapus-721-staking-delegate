@@ -31,9 +31,10 @@ contract DefaultSVGResolverTest is Test {
 
         // Get the base64 image part and decode it
         string memory _metadata = string(Base64.decode(_uri));
-        string memory _svg = string(Base64.decode(_metadata.slice(_metadata.indexOf("base64,") + 7, _metadata.lastIndexOf("}") - 1)));
+        string memory _svg =
+            string(Base64.decode(_metadata.slice(_metadata.indexOf("base64,") + 7, _metadata.lastIndexOf("}") - 1)));
 
-        // Write the image to a file       
+        // Write the image to a file
         vm.writeFile("./out/image.svg", _svg);
     }
 }

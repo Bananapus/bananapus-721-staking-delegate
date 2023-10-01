@@ -10,7 +10,7 @@ import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 contract JBERC20TerminalDeployer {
     /**
      * @notice Helper for deploying a new JB ERC20 terminal
-     * @dev The current owner of project 1 will become the owner of the terminal 
+     * @dev The current owner of project 1 will become the owner of the terminal
      * @param _token The token that this terminal manages.
      * @param _currency The currency that this terminal's token adheres to for price feeds.
      * @param _baseWeightCurrency The currency to base token issuance on.

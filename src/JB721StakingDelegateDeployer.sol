@@ -7,7 +7,7 @@ import "./JBERC20TerminalDeployer.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/JBERC20PaymentTerminal.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
-import { IJBDelegatesRegistry } from "@jbx-protocol/juice-delegates-registry/src/interfaces/IJBDelegatesRegistry.sol";
+import {IJBDelegatesRegistry} from "@jbx-protocol/juice-delegates-registry/src/interfaces/IJBDelegatesRegistry.sol";
 
 contract JB721StakingDelegateDeployer {
     IJBController public immutable controller;
@@ -23,7 +23,7 @@ contract JB721StakingDelegateDeployer {
     IJBDelegatesRegistry public immutable delegatesRegistry;
 
     /**
-     * @notice 
+     * @notice
      * This contract's current nonce, used for the Juicebox delegates registry.
      */
     uint256 internal _nonce;
@@ -81,7 +81,16 @@ contract JB721StakingDelegateDeployer {
 
         // Deploy the delegate
         _delegate = deployDelegate(
-            _projectId, _stakingToken, _uriResolver, _name, _symbol, _contractURI, _baseURI, _encodedIPFSUri, _tierMultiplier, _maxTier
+            _projectId,
+            _stakingToken,
+            _uriResolver,
+            _name,
+            _symbol,
+            _contractURI,
+            _baseURI,
+            _encodedIPFSUri,
+            _tierMultiplier,
+            _maxTier
         );
 
         // Deploy a new terminal for the project token
@@ -130,7 +139,11 @@ contract JB721StakingDelegateDeployer {
         }
     }
 
-    function _launchProject(JBProjectMetadata memory _projectMetadata ,JB721StakingDelegate _delegate, IJBPaymentTerminal[] memory _terminals) internal returns (uint256 _stakingProjectId) {
+    function _launchProject(
+        JBProjectMetadata memory _projectMetadata,
+        JB721StakingDelegate _delegate,
+        IJBPaymentTerminal[] memory _terminals
+    ) internal returns (uint256 _stakingProjectId) {
         return controller.launchProjectFor(
             address(0x1), // TODO: replace with a better address to prove there is no owner
             _projectMetadata,

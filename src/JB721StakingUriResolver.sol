@@ -24,12 +24,10 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
     string constant TEXT_COLOR = "TEXT_COLOR";
     string constant TEXT_SECTION = "TEXT_SECTION";
 
-        
     //*********************************************************************//
     // -------------------- private constant properties ------------------ //
     //*********************************************************************//
     uint256 private constant _ONE_BILLION = 1_000_000_000;
-
 
     // Configuration for the SVG
     uint256 private constant _SHOW_DECIMAL_AMOUNT_BELOW = 10;
@@ -41,9 +39,7 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         // Load the template
         string memory _template = _loadTemplate();
         // Calculate where we will need to replace occurances in `tokenUri`
-        uint256[] memory _indices = _template.indicesOf(
-            REPLACEMENT_OPEN_SYMBOL
-        );
+        uint256[] memory _indices = _template.indicesOf(REPLACEMENT_OPEN_SYMBOL);
         // Store them
         SVG_TEMPLATE_INDICES_POINTER = SSTORE2.write(bytes(abi.encode(_indices)));
     }
@@ -55,22 +51,16 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         // Perform your template manipulations
         Color[3] memory _colors = _getColorsForTier(tokenId);
 
-        uint256[] memory _indices = _template.indicesOf(
-            REPLACEMENT_OPEN_SYMBOL
-        );
+        uint256[] memory _indices = _template.indicesOf(REPLACEMENT_OPEN_SYMBOL);
 
         int256 _bytesDiff;
         for (uint256 _i = 0; _i < _indices.length; _i++) {
             uint256 _newLocation = uint256(int256(_indices[_i]) + _bytesDiff);
-            
-            uint256 _closeLocation = _template.indexOf(
-                REPLACEMENT_CLOSE_SYMBOL,
-                _newLocation + bytes(REPLACEMENT_OPEN_SYMBOL).length
-            );
-            string memory _identifier = _template.slice(
-                _newLocation + bytes(REPLACEMENT_OPEN_SYMBOL).length,
-                _closeLocation
-            );
+
+            uint256 _closeLocation =
+                _template.indexOf(REPLACEMENT_CLOSE_SYMBOL, _newLocation + bytes(REPLACEMENT_OPEN_SYMBOL).length);
+            string memory _identifier =
+                _template.slice(_newLocation + bytes(REPLACEMENT_OPEN_SYMBOL).length, _closeLocation);
 
             if (_identifier.eq(GRADIENT_COLOR_A)) {
                 int256 _diff;
@@ -109,7 +99,7 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
                 _bytesDiff += _diff;
                 continue;
             }
-            
+
             if (_identifier.eq(TEXT_COLOR)) {
                 int256 _diff;
                 (_template, _diff) = _replaceInTemplate(
@@ -140,40 +130,40 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         return _buildTokenUriResponse(_template);
     }
 
-    
-
-    function _determineBestTextColorForContrast(
-        Color _backgroundColor
-    ) internal pure returns (string memory) {
+    function _determineBestTextColorForContrast(Color _backgroundColor) internal pure returns (string memory) {
         (uint8 red, uint8 green, uint8 blue) = _backgroundColor.toRGB();
         // TODO change threshold to 150?
-        return
-            ((uint256(red) * 299) / 1000) +
-                ((uint256(green) * 587) / 1000) +
-                ((uint256(blue) * 114) / 1000) >
-                186
-                ? "121212"
-                : "f0f0f0";
+        return ((uint256(red) * 299) / 1000) + ((uint256(green) * 587) / 1000) + ((uint256(blue) * 114) / 1000) > 186
+            ? "121212"
+            : "f0f0f0";
     }
 
-        function _getSVGText(uint256 tokenId) internal pure returns (string memory) {
+    function _getSVGText(uint256 tokenId) internal pure returns (string memory) {
         // TODO get these amounts
         uint256 _tier = tierIdOfToken(tokenId);
-        uint256 _stakedAmount = 8.05 ether + 2005111000000;
+        uint256 _stakedAmount = 8.05 ether + 2_005_111_000_000;
 
         return string.concat(
-            '<text x="40" y="635" font-size="28">Tier ', _tier.toString() ,'</text>',
-            '<text x="45" y="660" font-size="14">', _getNumberInUnits(_stakedAmount, 18, _ROUND_TO) ,' NANA</text>'
+            '<text x="40" y="635" font-size="28">Tier ',
+            _tier.toString(),
+            "</text>",
+            '<text x="45" y="660" font-size="14">',
+            _getNumberInUnits(_stakedAmount, 18, _ROUND_TO),
+            " NANA</text>"
         );
     }
 
-    function _getNumberInUnits(uint256 _size, uint256 _decimals, uint256 _roundTo) internal pure returns (string memory) {
+    function _getNumberInUnits(uint256 _size, uint256 _decimals, uint256 _roundTo)
+        internal
+        pure
+        returns (string memory)
+    {
         uint256 _oneUnit = 10 ** _decimals;
-        
+
         // Get the number of full units
         uint256 _fullUnits = _size / _oneUnit;
-        
-        if(_size < _SHOW_DECIMAL_AMOUNT_BELOW * _oneUnit) {
+
+        if (_size < _SHOW_DECIMAL_AMOUNT_BELOW * _oneUnit) {
             uint256 _decimalAmount = _size - _fullUnits * _oneUnit;
             return string.concat(_fullUnits.toString(), _getStringDecimalNumber(_decimalAmount, _decimals, _roundTo));
         }
@@ -182,13 +172,13 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         uint256 _rawNumberSize = bytes(_rawNumber).length;
 
         // If its more than 1000 we comma divide the number
-        if(_rawNumberSize >= 4){
+        if (_rawNumberSize >= 4) {
             uint256 _seperators = (_rawNumberSize - 1) / 3;
             bytes memory _prettyNumber = new bytes(_rawNumberSize + _seperators);
 
             uint256 _posInPretty = _prettyNumber.length - 1;
             for (uint256 _i = 0; _i < _rawNumberSize; _i++) {
-                if(_i % 3 == 0 && _posInPretty != 0 && _i != 0) {
+                if (_i % 3 == 0 && _posInPretty != 0 && _i != 0) {
                     _prettyNumber[_posInPretty] = bytes1(0x2c);
                     --_posInPretty;
                 }
@@ -206,19 +196,23 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
      * @param _amountBelowDecimal the amount thats below the decimal (behind the decimal point)
      * @param _decimals the decimal amount we should use
      */
-    function _getStringDecimalNumber(uint256 _amountBelowDecimal, uint256 _decimals, uint256 _roundTo) internal pure returns (string memory) {
+    function _getStringDecimalNumber(uint256 _amountBelowDecimal, uint256 _decimals, uint256 _roundTo)
+        internal
+        pure
+        returns (string memory)
+    {
         // Round the number
         _amountBelowDecimal = _amountBelowDecimal - (_amountBelowDecimal % _roundTo);
 
         string memory _number = _amountBelowDecimal.toString();
         // These are all numbers, so they all take a single byte
         // First we left-pad the number so its at the correct location
-        while(bytes(_number).length < _decimals) {
+        while (bytes(_number).length < _decimals) {
             _number = string.concat("0", _number);
         }
         // Then we find how many right padded numbers there are
         uint256 _highestNonZero = bytes(_number).length - 1;
-        while(_highestNonZero > 0) {
+        while (_highestNonZero > 0) {
             if (bytes(_number)[_highestNonZero] != bytes1("0")) break;
             _highestNonZero--;
         }
@@ -231,17 +225,12 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         return string.concat(".", string(_finalString));
     }
 
-
-
-    function _getColorsForTier(
-        uint256 _tierId
-    ) internal pure returns (Color[3] memory _colors) {
+    function _getColorsForTier(uint256 _tierId) internal pure returns (Color[3] memory _colors) {
         bytes32 _hash = keccak256(abi.encodePacked(_tierId));
         _colors[0] = newColorFromRGB(bytes3(_hash));
         _colors[1] = newColorFromRGB(bytes3(_hash << 3));
         _colors[2] = newColorFromRGB(bytes3(_hash << 6));
     }
-
 
     /**
      * @notice
@@ -257,7 +246,7 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         return _tokenId / _ONE_BILLION;
     }
 
-    function _loadTemplate() internal virtual view returns (string memory) {
+    function _loadTemplate() internal view virtual returns (string memory) {
         return string(SSTORE2.read(SVG_TEMPLATE_POINTER));
     }
 
@@ -268,23 +257,16 @@ contract JB721StakingUriResolver is IJB721TokenUriResolver {
         uint256 _replaceTo
     ) internal pure returns (string memory _newTemplate, int256 _bytesDiff) {
         _newTemplate = string.concat(
-            _template.slice(0, _replaceFrom),
-            _replacement,
-            _template.slice(_replaceTo, bytes(_template).length)
+            _template.slice(0, _replaceFrom), _replacement, _template.slice(_replaceTo, bytes(_template).length)
         );
 
-        return (
-            _newTemplate,
-            int256(bytes(_replacement).length) - int256(_replaceTo - _replaceFrom)
-        );
+        return (_newTemplate, int256(bytes(_replacement).length) - int256(_replaceTo - _replaceFrom));
     }
 
     function _buildTokenUriResponse(string memory _svg) internal pure returns (string memory) {
         string memory _metadata = string(
             abi.encodePacked(
-                '{"name":"XYZ",',
-                '"description":"Description Text",',
-                '"image":"data:image/svg+xml;base64,'
+                '{"name":"XYZ",', '"description":"Description Text",', '"image":"data:image/svg+xml;base64,'
             )
         );
 

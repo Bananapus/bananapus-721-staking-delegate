@@ -12,12 +12,10 @@ import "../src/JB721StakingUriResolver.sol";
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract DelegateTest_Implementation is Test { 
-
+contract DelegateTest_Implementation is Test {
     string constant SVG_PATH = "./template.svg";
 
     function test_tokenUriOf() public {
-
         // Deploy the tokenResolver and dependencies
         string memory _template = vm.readFile(SVG_PATH);
         address _templatePointer = SSTORE2.write(bytes(_template));

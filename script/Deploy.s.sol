@@ -25,15 +25,15 @@ contract DeployMainnet is Script {
 }
 
 contract DeployGoerli is Script {
-
     IJBController JBController = IJBController(0x1d260DE91233e650F136Bf35f8A4ea1F2b68aDB6);
     IJBDirectory JBDirectory = IJBDirectory(0x8E05bcD2812E1449f0EC3aE24E2C395F533d9A99);
     IJBFundingCycleStore JBFundingCycleStore = IJBFundingCycleStore(0xB9Ee9d8203467f6EC0eAC81163d210bd1a7d3b55);
     IJBOperatorStore JBOperatorStore = IJBOperatorStore(0x99dB6b517683237dE9C494bbd17861f3608F3585);
-    IJBSingleTokenPaymentTerminalStore JBsingleTokenPaymentStore = IJBSingleTokenPaymentTerminalStore(0x101cA528F6c2E35664529eB8aa0419Ae1f724b49);
+    IJBSingleTokenPaymentTerminalStore JBsingleTokenPaymentStore =
+        IJBSingleTokenPaymentTerminalStore(0x101cA528F6c2E35664529eB8aa0419Ae1f724b49);
     IJBSplitsStore JBSplitsStore = IJBSplitsStore(0xce2Ce2F37fE5B2C2Dd047908B2F61c9c3f707272);
     IJBProjects JBProjects = IJBProjects(0x21263a042aFE4bAE34F08Bb318056C181bD96D3b);
-    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0xCe3Ebe8A7339D1f7703bAF363d26cD2b15D23C23); 
+    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0xCe3Ebe8A7339D1f7703bAF363d26cD2b15D23C23);
 
     WETH stakingToken = WETH(payable(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6)); // WETH on Goerli
 
@@ -78,8 +78,9 @@ contract DeployGoerli is Script {
         );
 
         // Deploy the test project
-        (uint256 _projectID ,IJBPayoutRedemptionPaymentTerminal _stakingTerminal, JB721StakingDelegate _newDelegate) = delegateDeployer.deployStakingProject(
-            JBProjectMetadata({content: 'bafkreig2nxunu6oxhmj6grsam5e7rzs5l6geulbcdukbila43dq2gyofny', domain: 0}),
+        (uint256 _projectID, IJBPayoutRedemptionPaymentTerminal _stakingTerminal, JB721StakingDelegate _newDelegate) =
+        delegateDeployer.deployStakingProject(
+            JBProjectMetadata({content: "bafkreig2nxunu6oxhmj6grsam5e7rzs5l6geulbcdukbila43dq2gyofny", domain: 0}),
             IERC20Metadata(address(stakingToken)),
             IJB721TokenUriResolver(_resolver),
             "WETH Governance",
@@ -98,7 +99,8 @@ contract DeployGoerli is Script {
         stakingToken.approve(address(_stakingTerminal), _cost);
 
         // Deploy the distributor
-        JB721StakingDistributor _distributor = new JB721StakingDistributor(_newDelegate, VESTING_CYCLE_DURATION, VESTING_CYCLES_UNIL_RELEASED);
+        JB721StakingDistributor _distributor =
+            new JB721StakingDistributor(_newDelegate, VESTING_CYCLE_DURATION, VESTING_CYCLES_UNIL_RELEASED);
 
         // Deploy a token to be distributed
         TestERC20 _token = new TestERC20();
@@ -119,7 +121,7 @@ contract DeployGoerli is Script {
         // nftIds[0] = _generateTokenId(1, 1);
 
         // _distributor.claim(nftIds, tokens);
-        
+
         vm.stopBroadcast();
 
         console2.log("delegate", address(_newDelegate));
@@ -138,15 +140,14 @@ contract DeployGoerli is Script {
 }
 
 contract Claim is Script {
-
     JB721StakingDistributor _distributor = JB721StakingDistributor(0x314A84CCad8bd49e1d198c048f281A416B4b5824);
     IERC20 _token = IERC20(0x6eaB554233DbDafA8197ab2B9E4a471585711618);
-     function setUp() public {}
 
-     function run() public {
+    function setUp() public {}
 
+    function run() public {
         vm.startBroadcast();
-         // Perform the claim
+        // Perform the claim
         IERC20[] memory tokens = new IERC20[](1);
         tokens[0] = IERC20(_token);
 
@@ -156,25 +157,22 @@ contract Claim is Script {
         _distributor.beginVesting(nftIds, tokens);
 
         vm.stopBroadcast();
-
-     }
-
-} 
+    }
+}
 
 contract Collect is Script {
-
     JB721StakingDistributor _distributor = JB721StakingDistributor(0x314A84CCad8bd49e1d198c048f281A416B4b5824);
     IERC20 _token = IERC20(0x6eaB554233DbDafA8197ab2B9E4a471585711618);
-     function setUp() public {}
 
-     function run() public {
+    function setUp() public {}
 
+    function run() public {
         vm.startBroadcast();
 
         _distributor.currentRound();
         _distributor.roundStartBlock(10);
 
-         // Perform the claim
+        // Perform the claim
         IERC20[] memory tokens = new IERC20[](1);
         tokens[0] = IERC20(_token);
 
@@ -184,16 +182,13 @@ contract Collect is Script {
         _distributor.collectVestedRewards(nftIds, tokens, 10);
 
         vm.stopBroadcast();
-
-     }
-
-} 
+    }
+}
 
 contract TestERC20 is ERC20 {
-    constructor () ERC20( "testToken", "TEST") {}
+    constructor() ERC20("testToken", "TEST") {}
 
     function ForTest_mintTo(uint256 _amount, address _beneficiary) external {
         _mint(_beneficiary, _amount);
     }
 }
-

@@ -141,17 +141,18 @@ contract JB721StakingDelegate is
     }
 
     /// @notice Gets an array of active tiers.
-    /// @param _includeResolvedUri If enabled, if there's a token URI resolver, the content will be resolved and included.
-    /// @param _startingId The starting tier ID of the array of tiers sorted by contribution floor. Send 0 to get all active tiers.
+    /// @param _includeResolvedUri If enabled, if there's a token URI resolver, the content will be resolved and
+    /// included.
+    /// @param _startingId The starting tier ID of the array of tiers sorted by contribution floor. Send 0 to get all
+    /// active tiers.
     /// @param _size The number of tiers to include.
     /// @return _tiers An array of active tiers.
-    function tiersOf(
-        address,
-        uint256[] calldata,
-        bool _includeResolvedUri,
-        uint256 _startingId,
-        uint256 _size
-    ) external view override returns (JB721Tier[] memory _tiers) {
+    function tiersOf(address, uint256[] calldata, bool _includeResolvedUri, uint256 _startingId, uint256 _size)
+        external
+        view
+        override
+        returns (JB721Tier[] memory _tiers)
+    {
         // Check up to what tierId we are going to be loading
         uint256 _upToTier = _startingId + _size;
         // Cap at the last tier
@@ -162,7 +163,7 @@ contract JB721StakingDelegate is
 
         uint256 _index;
         uint256 _currentTier = _startingId;
-        while(_currentTier < _upToTier) {
+        while (_currentTier < _upToTier) {
             _tiers[_index++] = tierOf(address(0), _currentTier++, _includeResolvedUri);
         }
     }
@@ -332,17 +333,17 @@ contract JB721StakingDelegate is
 
     function setLockManager(uint256 _tokenId, IBPLockManager _newLockManager) external {
         // Make sure the sender is allowed to perform this action
-        if(!_isApprovedOrOwner(msg.sender, _tokenId)) revert UNAUTHORIZED_TOKEN(_tokenId);
+        if (!_isApprovedOrOwner(msg.sender, _tokenId)) revert UNAUTHORIZED_TOKEN(_tokenId);
 
         // Get the lockmManager for this tokenId
         IBPLockManager _lockManager = lockManager[_tokenId];
-        
+
         // If there is already a lockManager set, check to see if the token is unlocked
-        // TODO: Should we stay checking the code length here, or should we always call `register` and use that as a sanity check
-        if( 
-            address(_lockManager) != address (0) &&
-            address(_lockManager).code.length != 0 &&
-            !_lockManager.isUnlocked(address(this), _tokenId)
+        // TODO: Should we stay checking the code length here, or should we always call `register` and use that as a
+        // sanity check
+        if (
+            address(_lockManager) != address(0) && address(_lockManager).code.length != 0
+                && !_lockManager.isUnlocked(address(this), _tokenId)
         ) revert TOKEN_LOCKED(_tokenId, _lockManager);
 
         lockManager[_tokenId] = _newLockManager;
@@ -397,25 +398,23 @@ contract JB721StakingDelegate is
                 bytes memory _lockManagerData;
 
                 // Decode the metadata.
-                (,,,, _votingDelegate, _tierIdsToMint, _lockManager, _lockManagerData) =
-                    abi.decode(_data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[], IBPLockManager, bytes));
+                (,,,, _votingDelegate, _tierIdsToMint, _lockManager, _lockManagerData) = abi.decode(
+                    _data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[], IBPLockManager, bytes)
+                );
                 if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
 
                 // Mint the specified tiers with the custom stake amount
                 uint256[] memory _tokenIds;
-                (_leftoverAmount, _tokenIds) =
-                    _mintTiersWithCustomAmount(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
+                (_leftoverAmount, _tokenIds) = _mintTiersWithCustomAmount(
+                    _leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager
+                );
 
                 // If a lockmanager was set we call the registration method
-                if(address(_lockManager) != address(0)) 
+                if (address(_lockManager) != address(0)) {
                     _lockManager.onRegistration(
-                        _data.payer,
-                        _data.beneficiary,
-                        _data.amount.value,
-                        _tokenIds,
-                        _lockManagerData
+                        _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
                     );
-
+                }
             } else if (bytes4(_data.metadata[64:68]) == type(IJBTiered721Delegate).interfaceId) {
                 // Keep a reference to the the specific tier IDs to mint.
                 uint16[] memory _tierIdsToMint;
@@ -621,9 +620,9 @@ contract JB721StakingDelegate is
             return _tierId * 100 - 100;
         }
         // 11-20
-        if (_tierId <= 20) return (_tierId - 10) * 1_000;
+        if (_tierId <= 20) return (_tierId - 10) * 1000;
         // 20-30
-        if (_tierId <= 30) return (_tierId - 20) * 2_000 + 10_000;
+        if (_tierId <= 30) return (_tierId - 20) * 2000 + 10_000;
         // 30-37
         if (_tierId <= 37) return (_tierId - 27) * 10_000;
         // 37-46
@@ -672,30 +671,31 @@ contract JB721StakingDelegate is
     /**
      * @notice handles checking if a token is locked or not
      */
-     function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
         // We do not need to check anything on mint
-        if (from == address(0)) return; 
+        if (from == address(0)) return;
 
         // Get the lockmManager for this tokenId
         IBPLockManager _lockManager = lockManager[tokenId];
 
-        // TODO: Should we check code length of the lockManager here, or should we rely on a check when setting the lockManager
+        // TODO: Should we check code length of the lockManager here, or should we rely on a check when setting the
+        // lockManager
 
         // If there is none, then any transfer/burn is fine
-        if (address(_lockManager) == address(0)) return; 
+        if (address(_lockManager) == address(0)) return;
 
-        // `to` can only be the zero address when being called through burn, 
+        // `to` can only be the zero address when being called through burn,
         // so this is a redemption or voluntary burn
         // NOTICE: unsafe call
         if (to == address(0)) _lockManager.onRedeem(tokenId, from);
 
         // Check if the user is able to move the token or not
         // NOTICE: unsafe call
-        if(!_lockManager.isUnlocked(address(this), tokenId)) revert TOKEN_LOCKED(tokenId, _lockManager);
+        if (!_lockManager.isUnlocked(address(this), tokenId)) revert TOKEN_LOCKED(tokenId, _lockManager);
 
         // Delete the lockManager, since this token now (probably) belongs to some other user
         delete lockManager[tokenId];
-     }
+    }
 
     /**
      * @notice
