@@ -12,7 +12,7 @@ import "./interfaces/IJBTiered721MinimalDelegateStore.sol";
 import "./interfaces/IBPLockManager.sol";
 import "./struct/JB721StakingTier.sol";
 
-/// @notice A contract that issues and redeems NFTs that represent locked token positions. 
+/// @notice A contract that issues and redeems NFTs that represent locked token positions.
 contract JB721StakingDelegate is
     Votes,
     JB721Delegate,
@@ -59,7 +59,8 @@ contract JB721StakingDelegate is
     uint256 public immutable maxTierId;
 
     /// @notice The multiplier applied to minimum staking thresholds for each tier ID.
-    /// @dev This is useful to tune the staking mechanism to various expected token supplies. Some networks issue 1 $TOKEN per 1 ETH received, others 1 million $TOKENs per ETH received, etc.
+    /// @dev This is useful to tune the staking mechanism to various expected token supplies. Some networks issue 1
+    /// $TOKEN per 1 ETH received, others 1 million $TOKENs per ETH received, etc.
     uint256 public immutable tierMultiplier;
 
     //*********************************************************************//
@@ -118,7 +119,8 @@ contract JB721StakingDelegate is
 
     /// @notice Returns an array of tiers.
     /// @param _includeResolvedUri A flag indicating if the URIs should be resolved within the returned tiers.
-    /// @param _startingId The ID of the tier to begin returning from. Tiers are sorted by contribution floor. Send 0 to get all active tiers.
+    /// @param _startingId The ID of the tier to begin returning from. Tiers are sorted by contribution floor. Send 0 to
+    /// get all active tiers.
     /// @param _size The number of tiers to include.
     /// @return tiers An array of active tiers.
     function tiersOf(address, uint256[] calldata, bool _includeResolvedUri, uint256 _startingId, uint256 _size)
@@ -137,12 +139,12 @@ contract JB721StakingDelegate is
         tiers = new JB721Tier[](_maxTierId - _startingId);
 
         // Iterate through all tiers.
-        for (uint256 _i; _i < _maxTierId - _startingId) {
+        for (uint256 _i; _i < _maxTierId - _startingId;) {
             // Return the tier.
             tiers[_i] = tierOf(address(0), _startingId + _i, _includeResolvedUri);
 
             unchecked {
-               _i++;
+                _i++;
             }
         }
     }
@@ -260,7 +262,7 @@ contract JB721StakingDelegate is
     //*********************************************************************//
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
-    
+
     /// @notice Sets the lock manager for a token.
     /// @dev Only the owner of a token or an approved operator can set a new lock manager.
     /// @param _tokenId The ID of the token to set the lock manager of.
@@ -277,7 +279,7 @@ contract JB721StakingDelegate is
             address(_lockManager) != address(0) && address(_lockManager).code.length != 0
                 && !_lockManager.isUnlocked(address(this), _tokenId)
         ) revert TOKEN_LOCKED(_tokenId, _lockManager);
-        
+
         // Set the new lock manager.
         lockManager[_tokenId] = _newLockManager;
 
@@ -289,7 +291,8 @@ contract JB721StakingDelegate is
     // ------------------------ internal functions ----------------------- //
     //*********************************************************************//
 
-    /// @notice The voting units for an account across all tiers. 721s in a tier have a specific preset number of voting units.
+    /// @notice The voting units for an account across all tiers. 721s in a tier have a specific preset number of voting
+    /// units.
     /// @param _account The account to get voting units for.
     /// @return units The voting units for the account.
     function _getVotingUnits(address _account) internal view virtual override returns (uint256 units) {
@@ -301,7 +304,7 @@ contract JB721StakingDelegate is
     function _processPayment(JBDidPayData calldata _data) internal virtual override {
         // Only payment in the staking token is allowed.
         if (IERC20(_data.amount.token) != stakingToken) revert INVALID_TOKEN();
-        
+
         // Keep a reference to the leftover amount.
         uint256 _leftoverAmount = _data.amount.value;
 
@@ -333,18 +336,18 @@ contract JB721StakingDelegate is
                 // Mint the specified tiers with the custom stake amount
                 uint256[] memory _tokenIds;
 
-                // Mint 721 positions for the staked amount. 
+                // Mint 721 positions for the staked amount.
                 (_leftoverAmount, _tokenIds) = _mintTiersWithCustomAmount(
                     _leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager
                 );
 
                 // Register the lock manager if needed.
-                if (address(_lockManager) != address(0)) 
+                if (address(_lockManager) != address(0)) {
                     _lockManager.onRegistration(
                         _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
                     );
-                
-            } 
+                }
+            }
         }
 
         // All paid tokens must be staked.
@@ -378,7 +381,7 @@ contract JB721StakingDelegate is
 
         // Decode the metadata
         (,, uint256[] memory _decodedTokenIds) = abi.decode(_data.metadata, (bytes32, bytes4, uint256[]));
-        
+
         // Return the redemption weight of all the tokens.
         return (redemptionWeightOf(_decodedTokenIds, _data), _data.memo, delegateAllocations);
     }
@@ -445,10 +448,7 @@ contract JB721StakingDelegate is
     /// @param _stakeAmount The amount that is being staked.
     /// @param _beneficiary The address that is the beneficiary of the mint.
     /// @return tokenId the id of the token that was minted
-    function _mintTier(uint16 _tierId, uint256 _stakeAmount, address _beneficiary)
-        internal
-        returns (uint256 tokenId)
-    {
+    function _mintTier(uint16 _tierId, uint256 _stakeAmount, address _beneficiary) internal returns (uint256 tokenId) {
         // Generate the token ID.
         unchecked {
             tokenId = _generateTokenId(_tierId, ++numberOfTokensMintedOfTier[_tierId]);
@@ -524,8 +524,8 @@ contract JB721StakingDelegate is
     function tierIdOfToken(uint256 _tokenId) public pure returns (uint256) {
         return _tokenId / _ONE_BILLION;
     }
-    
-    /// @notice Hook to prevent locked tokens from being transferred. 
+
+    /// @notice Hook to prevent locked tokens from being transferred.
     /// @param _from The address to transfer the token from.
     /// @param _to The address to transfer the token to.
     /// @param _tokenId The ID of the token being transferred.
