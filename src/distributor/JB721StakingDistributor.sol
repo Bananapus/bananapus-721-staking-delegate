@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.20;
 
 import {JBDistributor} from "lib/bananapus-distributor/src/JBDistributor.sol";
 import {JB721StakingDelegate} from "../JB721StakingDelegate.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.20;
 
 import "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
 import "@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721Flags.sol";

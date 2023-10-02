@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.20;
 
 /**
  * @notice Interface for 721Delegate that has all the required methods for UI support.
