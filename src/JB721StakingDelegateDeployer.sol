@@ -143,9 +143,9 @@ contract JB721StakingDelegateDeployer {
         JBProjectMetadata memory _projectMetadata,
         JB721StakingDelegate _delegate,
         IJBPaymentTerminal[] memory _terminals
-    ) internal returns (uint256 _stakingProjectId) {
+    ) internal returns (uint256) {
         return controller.launchProjectFor(
-            address(0x1), // TODO: replace with a better address to prove there is no owner
+            address(this),
             _projectMetadata,
             JBFundingCycleData({duration: 0, weight: 0, discountRate: 0, ballot: IJBFundingCycleBallot(address(0))}),
             JBFundingCycleMetadata({
@@ -176,7 +176,7 @@ contract JB721StakingDelegateDeployer {
             new JBGroupedSplits[](0),
             new JBFundAccessConstraints[](0),
             _terminals,
-            ""
+            "staking deployed"
         );
     }
 }
