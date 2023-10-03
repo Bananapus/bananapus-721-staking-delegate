@@ -49,10 +49,10 @@ contract JB721StakingDelegate is
     /// @notice The staking token for this delegate, this is the only token that is accepted as payments.
     IERC20 public immutable stakingToken;
 
-    /// @notice The contract that contains the NFT's rendering and contextual data.
+    /// @notice The contract that contains the 721's rendering and contextual data.
     IJB721TokenUriResolver public immutable uriResolver;
 
-    /// @notice Encoded baseURI to be used when no token resolver is provided.
+    /// @notice Encoded URI to be used when no token resolver is provided.
     bytes32 public immutable encodedIPFSUri;
 
     /// @notice The max tier ID that is allowed (up to a limit of 59)
@@ -67,10 +67,10 @@ contract JB721StakingDelegate is
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice Contract metadata uri.
+    /// @notice A URI containing metadata for this 721.
     string public override contractURI;
 
-    /// @notice The common base for the tokenUri's
+    /// @notice The common base for the encoded IPFS URI.
     string public baseURI;
 
     /// @notice The staked token balances represented by each 721 ID.
@@ -238,8 +238,8 @@ contract JB721StakingDelegate is
         IJB721TokenUriResolver _uriResolver,
         string memory _name,
         string memory _symbol,
-        string memory _contractURI,
-        string memory _baseURI,
+        string memory _contractUri,
+        string memory _baseUri,
         bytes32 _encodedIPFSUri,
         uint256 _tierMultiplier,
         uint8 _maxTierId
@@ -249,9 +249,9 @@ contract JB721StakingDelegate is
 
         stakingToken = _stakingToken;
         uriResolver = _uriResolver;
-        contractURI = _contractURI;
+        contractURI = _contractUri;
         encodedIPFSUri = _encodedIPFSUri;
-        baseURI = _baseURI;
+        baseURI = _baseUri;
         maxTierId = _maxTierId;
         tierMultiplier = _tierMultiplier;
 
