@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @notice Interface for a contract that is able to lock positions, this interface contains the methods that are required by `JB721StakingDelegate`.
+/// @notice Interface for a contract that is able to lock positions, this interface contains the methods that are
+/// required by `JB721StakingDelegate`.
 interface IBPLockManager {
     /// @notice hook that (optionally) gets called upon registration as a lockManager.
     /// @param _payer the person who send the transaction and paid for the staked position

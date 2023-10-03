@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
-import "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
-import "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
-import "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IJB721StakingDelegate.sol";
-import "./interfaces/IJBTiered721MinimalDelegate.sol";
-import "./interfaces/IJBTiered721MinimalDelegateStore.sol";
-import "./interfaces/IBPLockManager.sol";
-import "./struct/JB721StakingTier.sol";
+import {JB721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
+import {JBIpfsDecoder} from "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
+import {Votes} from "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
+import {IJBTiered721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IJB721StakingDelegate} from "./interfaces/IJB721StakingDelegate.sol";
+import {IJBTiered721MinimalDelegate} from "./interfaces/IJBTiered721MinimalDelegate.sol";
+import {IJBTiered721MinimalDelegateStore} from "./interfaces/IJBTiered721MinimalDelegateStore.sol";
+import {IBPLockManager} from "./interfaces/IBPLockManager.sol";
+import {JB721StakingTier} from "./struct/JB721StakingTier.sol";
 
 /// @notice A contract that issues and redeems NFTs that represent locked token positions.
 contract JB721StakingDelegate is

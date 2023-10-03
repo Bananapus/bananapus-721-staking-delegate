@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IBPLockManager.sol";
+import {IBPLockManager} from "./IBPLockManager.sol";
 
 interface IJB721StakingDelegate {
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool _isAllowed);
