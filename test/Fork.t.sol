@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 
+import "../src/JB721StakingDelegate.sol";
 import "../src/JBERC20TerminalDeployer.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
 import "../src/distributor/JB721StakingDistributor.sol";
@@ -244,7 +245,7 @@ contract EmptyTest_Fork is Test {
         returns (uint256 _cost)
     {
         // ValidateTier
-        uint256 _maxTier = _delegate.maxTier();
+        uint256 _maxTier = _delegate.maxTierId();
         vm.assume(_tierId <= _maxTier);
 
         JB721Tier memory _tier = _delegate.tierOf(address(_delegate), _tierId, false);

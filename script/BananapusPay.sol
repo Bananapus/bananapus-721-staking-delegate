@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 import "../src/JB721StakingDelegateDeployer.sol";
+import "../src/JB721StakingDelegate.sol";
 import {WETH} from "lib/solady/src/tokens/WETH.sol";
 
 // TEMP copied from Tentacles repo

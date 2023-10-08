@@ -14,6 +14,7 @@ import "lib/solady/src/utils/LibString.sol";
 import "../src/JB721StakingUriResolver.sol";
 
 import {ERC20, IERC20} from "lib/bananapus-distributor/lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {IJBFundingCycleStore} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleStore.sol";
 import {WETH} from "lib/solady/src/tokens/WETH.sol";
 
 contract DeployMainnet is Script {

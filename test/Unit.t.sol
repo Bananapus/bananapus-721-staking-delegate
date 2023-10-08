@@ -9,6 +9,8 @@ import "../src/JB721StakingDelegateDeployer.sol";
 import "../src/distributor/JB721StakingDistributor.sol";
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {JBTokenAmount} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBTokenAmount.sol";
+import {JBConstants} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
 
 contract DelegateTest_Unit is Test {
     using stdStorage for StdStorage;
@@ -627,7 +629,7 @@ contract DelegateTest_Unit is Test {
         returns (uint256 _cost)
     {
         // ValidateTier
-        uint256 _maxTier = _delegate.maxTier();
+        uint256 _maxTier = _delegate.maxTierId();
         vm.assume(_tierId <= _maxTier);
 
         JB721Tier memory _tier = _delegate.tierOf(address(_delegate), _tierId, false);

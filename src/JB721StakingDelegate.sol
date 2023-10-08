@@ -4,13 +4,23 @@ pragma solidity ^0.8.20;
 import {JB721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/abstract/JB721Delegate.sol";
 import {JBIpfsDecoder} from "@jbx-protocol/juice-721-delegate/contracts/libraries/JBIpfsDecoder.sol";
 import {Votes} from "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.sol";
-import {IJBTiered721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import {JB721StakingTier} from "./struct/JB721StakingTier.sol";
+import {JB721Tier} from "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
+import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
+import {JBDidPayData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData.sol";
+import {JBRedemptionDelegateAllocation} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation.sol";
+
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
+import {IBPLockManager} from "./interfaces/IBPLockManager.sol";
+import {JBTiered721Flags} from "@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721Flags.sol";
+import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import {IJB721StakingDelegate} from "./interfaces/IJB721StakingDelegate.sol";
 import {IJBTiered721MinimalDelegate} from "./interfaces/IJBTiered721MinimalDelegate.sol";
 import {IJBTiered721MinimalDelegateStore} from "./interfaces/IJBTiered721MinimalDelegateStore.sol";
-import {IBPLockManager} from "./interfaces/IBPLockManager.sol";
-import {JB721StakingTier} from "./struct/JB721StakingTier.sol";
+import {IJBTiered721Delegate, IJB721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import {IJB721TokenUriResolver} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol";
+
 
 /// @notice A contract that issues and redeems NFTs that represent locked token positions.
 contract JB721StakingDelegate is
@@ -44,7 +54,7 @@ contract JB721StakingDelegate is
     //*********************************************************************//
 
     /// @notice The address of the singleton 'JB721StakingDelegate'.
-    address public immutable override codeOrigin;
+    address public immutable codeOrigin;
 
     /// @notice The staking token for this delegate, this is the only token that is accepted as payments.
     IERC20 public immutable stakingToken;
@@ -196,7 +206,7 @@ contract JB721StakingDelegate is
         view
         virtual
         override
-        returns (uint256 _value)
+        returns (uint256 weight)
     {
         return _redemptionWeightOf(_tokenIds);
     }
@@ -337,7 +347,7 @@ contract JB721StakingDelegate is
                 uint256[] memory _tokenIds;
 
                 // Mint 721 positions for the staked amount.
-                (_leftoverAmount, _tokenIds) = _mintTiersWithCustomAmount(
+                (_leftoverAmount, _tokenIds) = _mintTiers(
                     _leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager
                 );
 
@@ -465,8 +475,8 @@ contract JB721StakingDelegate is
     /// @dev Reverts if the tier ID does not exist
     /// @param _tierId The ID of the tier to get the minimum stake for.
     /// @return The minimum required stake.
-    function _getTierMinStake(uint16 _tier) internal view returns (uint256) {
-        return _getTierBaseAmount(_tier) * tierMultiplier;
+    function _getTierMinStake(uint16 _tierId) internal view returns (uint256) {
+        return _getTierBaseAmount(_tierId) * tierMultiplier;
     }
 
     /// @notice Get the base minimum amount for each tier.

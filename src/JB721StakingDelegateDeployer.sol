@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {JBCurrencies} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBCurrencies.sol";
+import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
+import {JBGroupedSplits} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGroupedSplits.sol";
+import {JBFundingCycleData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleData.sol";
+import {JBFundingCycleMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundingCycleMetadata.sol";
+import {JBGlobalFundingCycleMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGlobalFundingCycleMetadata.sol";
+import {JBFundAccessConstraints} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBFundAccessConstraints.sol";
+import {JB721StakingDelegate} from "./JB721StakingDelegate.sol";
+import {JBERC20TerminalDeployer} from "./JBERC20TerminalDeployer.sol";
+
 import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import {IJBController} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
 import {IJBSingleTokenPaymentTerminalStore} from
@@ -8,10 +19,12 @@ import {IJBSingleTokenPaymentTerminalStore} from
 import {IJBOperatorStore} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatorStore.sol";
 import {IJBSplitsStore} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitsStore.sol";
 import {IJBProjects} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBProjects.sol";
-import {IJBProjects} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBProjects.sol";
+import {IJBPaymentTerminal} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
+import {IJBFundingCycleBallot} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol";
+import {IJBPayoutRedemptionPaymentTerminal} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal.sol";
+import {IJB721TokenUriResolver} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol";
 import {IJBDelegatesRegistry} from "@jbx-protocol/juice-delegates-registry/src/interfaces/IJBDelegatesRegistry.sol";
-import {JB721StakingDelegate} from "./JB721StakingDelegate.sol";
-import {JBERC20TerminalDeployer} from "./JBERC20TerminalDeployer.sol";
+
 
 /// @notice Deploy Juicebox projects with a single purpose of providing staking functionality.
 contract JB721StakingDelegateDeployer {
@@ -94,13 +107,13 @@ contract JB721StakingDelegateDeployer {
     /// @param _name The name of the staking 721.
     /// @param _symbol The symbol of the staking 721.
     /// @param _contractUri A URI containing metadata for the 721.
-    /// @param _baseUr A common base for the encoded IPFS URIs.
+    /// @param _baseUri A common base for the encoded IPFS URIs.
     /// @param _encodedIPFSUri Encoded URI to be used when no token resolver is provided.
     /// @param _tierMultiplier The multiplier applied to minimum staking thresholds for each tier ID.
     /// @param _maxTier The maximum number of tiers.
-    /// @return stakingProjectId The ID of the project managing staking.
-    /// @return stakingTerminal The payment terminal through which staking will be conducted.
-    /// @return delegate The 721 delegate representing staking positions.
+    /// @return _stakingProjectId The ID of the project managing staking.
+    /// @return _stakingTerminal The payment terminal through which staking will be conducted.
+    /// @return _delegate The 721 delegate representing staking positions.
     function deployStakingProject(
         JBProjectMetadata memory _projectMetadata,
         IERC20Metadata _stakingToken,
@@ -115,9 +128,9 @@ contract JB721StakingDelegateDeployer {
     )
         external
         returns (
-            uint256 stakingProjectId,
-            IJBPayoutRedemptionPaymentTerminal stakingTerminal,
-            JB721StakingDelegate delegate
+            uint256 _stakingProjectId,
+            IJBPayoutRedemptionPaymentTerminal _stakingTerminal,
+            JB721StakingDelegate _delegate
         )
     {
         // Get the project ID, optimistically knowing it will be one greater than the current count.
