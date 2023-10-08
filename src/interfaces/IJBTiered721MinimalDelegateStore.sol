@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.20;
 
-import "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
-import "@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721Flags.sol";
+import {JB721Tier} from "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
+import {JBTiered721Flags} from "@jbx-protocol/juice-721-delegate/contracts/structs/JBTiered721Flags.sol";
 
-/**
- * @notice Interface for 721DelegateStore that has all the required methods for UI support.
- */
+/// @notice Interface for 721DelegateStore that has all the required methods for UI support.
 interface IJBTiered721MinimalDelegateStore {
     function tierOf(address _nft, uint256 _id, bool _includeResolvedUri)
         external
