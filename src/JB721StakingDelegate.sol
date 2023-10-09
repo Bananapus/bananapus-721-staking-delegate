@@ -34,6 +34,7 @@ contract JB721StakingDelegate is
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error INVALID_PAYMENT_METADATA();
     error DELEGATION_NOT_ALLOWED();
     error INVALID_TOKEN();
     error INVALID_TIER();
@@ -139,22 +140,22 @@ contract JB721StakingDelegate is
         override
         returns (JB721Tier[] memory tiers)
     {
-        // Keep a reference to the max tier ID.
-        uint256 _maxTierId = maxTierId;
+        // Check up to what tierId we are going to be loading
+        uint256 _upToTier = _startingId + _size;
 
-        // Return an empty array if the starting ID is not within the max tier ID.
-        if (_startingId > _maxTierId) return new JB721Tier[](0);
+        // Cap at the last tier
+        if (_upToTier > maxTierId + 1) _upToTier = maxTierId + 1;
 
         // Initialize an array with the appropriate length.
-        tiers = new JB721Tier[](_maxTierId - _startingId);
+        tiers = new JB721Tier[](_upToTier - _startingId);
 
         // Iterate through all tiers.
-        for (uint256 _i; _i < _maxTierId - _startingId;) {
+        for (uint256 _i; _i < _upToTier - _startingId;) {
             // Return the tier.
             tiers[_i] = tierOf(address(0), _startingId + _i, _includeResolvedUri);
 
             unchecked {
-                _i++;
+                ++_i;
             }
         }
     }
@@ -357,8 +358,12 @@ contract JB721StakingDelegate is
                         _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
                     );
                 }
-            }
-        }
+            } else {
+                revert INVALID_PAYMENT_METADATA();
+            } 
+        } else {
+            revert INVALID_PAYMENT_METADATA();
+        } 
 
         // All paid tokens must be staked.
         if (_leftoverAmount != 0) revert OVERSPENDING();
