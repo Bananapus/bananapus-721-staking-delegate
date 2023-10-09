@@ -8,7 +8,8 @@ import {JB721StakingTier} from "./struct/JB721StakingTier.sol";
 import {JB721Tier} from "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
 import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
 import {JBDidPayData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData.sol";
-import {JBRedemptionDelegateAllocation} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation.sol";
+import {JBRedemptionDelegateAllocation} from
+    "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
@@ -18,9 +19,11 @@ import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interface
 import {IJB721StakingDelegate} from "./interfaces/IJB721StakingDelegate.sol";
 import {IJBTiered721MinimalDelegate} from "./interfaces/IJBTiered721MinimalDelegate.sol";
 import {IJBTiered721MinimalDelegateStore} from "./interfaces/IJBTiered721MinimalDelegateStore.sol";
-import {IJBTiered721Delegate, IJB721Delegate} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
+import {
+    IJBTiered721Delegate,
+    IJB721Delegate
+} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJBTiered721Delegate.sol";
 import {IJB721TokenUriResolver} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol";
-
 
 /// @notice A contract that issues and redeems NFTs that represent locked token positions.
 contract JB721StakingDelegate is
@@ -348,9 +351,8 @@ contract JB721StakingDelegate is
                 uint256[] memory _tokenIds;
 
                 // Mint 721 positions for the staked amount.
-                (_leftoverAmount, _tokenIds) = _mintTiers(
-                    _leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager
-                );
+                (_leftoverAmount, _tokenIds) =
+                    _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
 
                 // Register the lock manager if needed.
                 if (address(_lockManager) != address(0)) {
@@ -360,10 +362,10 @@ contract JB721StakingDelegate is
                 }
             } else {
                 revert INVALID_PAYMENT_METADATA();
-            } 
+            }
         } else {
             revert INVALID_PAYMENT_METADATA();
-        } 
+        }
 
         // All paid tokens must be staked.
         if (_leftoverAmount != 0) revert OVERSPENDING();
