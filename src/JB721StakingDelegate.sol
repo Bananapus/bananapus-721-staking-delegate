@@ -297,8 +297,7 @@ contract JB721StakingDelegate is
         // Set the new lock manager.
         lockManager[_tokenId] = _newLockManager;
 
-        // TODO: emit event?
-        // ANSWER: yes.
+        emit LockManagerUpdated(_tokenId, address(_newLockManager));
     }
 
     //*********************************************************************//
@@ -328,40 +327,36 @@ contract JB721StakingDelegate is
         // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
         // Skip another 32 bytes reserved for generic extension parameters.
         // Check the 4 bytes interfaceId to verify the metadata is intended for this contract.
-        if (_data.metadata.length > 68) {
-            if (bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId) {
-                // Keep a reference to the the specific tier IDs to mint.
-                JB721StakingTier[] memory _tierIdsToMint;
+        if (_data.metadata.length > 68 && bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId) {
+            // Keep a reference to the the specific tier IDs to mint.
+            JB721StakingTier[] memory _tierIdsToMint;
 
-                // Keep a reference to the lock manager to use.
-                IBPLockManager _lockManager;
+            // Keep a reference to the lock manager to use.
+            IBPLockManager _lockManager;
 
-                // Keep a reference to the lock manager data to register the lock manager with.
-                bytes memory _lockManagerData;
+            // Keep a reference to the lock manager data to register the lock manager with.
+            bytes memory _lockManagerData;
 
-                // Decode the metadata.
-                (,,,, _votingDelegate, _tierIdsToMint, _lockManager, _lockManagerData) = abi.decode(
-                    _data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[], IBPLockManager, bytes)
+            // Decode the metadata.
+            (,,,, _votingDelegate, _tierIdsToMint, _lockManager, _lockManagerData) = abi.decode(
+                _data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[], IBPLockManager, bytes)
+            );
+
+            // Only allow delegation if the payer is the beneficiary.
+            if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
+
+            // Mint the specified tiers with the custom stake amount
+            uint256[] memory _tokenIds;
+
+            // Mint 721 positions for the staked amount.
+            (_leftoverAmount, _tokenIds) =
+                _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
+
+            // Register the lock manager if needed.
+            if (address(_lockManager) != address(0)) {
+                _lockManager.onRegistration(
+                    _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
                 );
-
-                // Only allow delegation if the payer is the beneficiary.
-                if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
-
-                // Mint the specified tiers with the custom stake amount
-                uint256[] memory _tokenIds;
-
-                // Mint 721 positions for the staked amount.
-                (_leftoverAmount, _tokenIds) =
-                    _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
-
-                // Register the lock manager if needed.
-                if (address(_lockManager) != address(0)) {
-                    _lockManager.onRegistration(
-                        _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
-                    );
-                }
-            } else {
-                revert INVALID_PAYMENT_METADATA();
             }
         } else {
             revert INVALID_PAYMENT_METADATA();
@@ -448,8 +443,11 @@ contract JB721StakingDelegate is
             // Mint the token.
             tokenIds[_i] = _mintTier(_tiers[_i].tierId, _tiers[_i].amount, _beneficiary);
 
-            // Set the lock manager for the mint.
-            lockManager[tokenIds[_i]] = _lockManager;
+            // If a lockManager was passed set it.
+            if (address(_lockManager) != address(0)) {
+                lockManager[tokenIds[_i]] = _lockManager;
+                emit LockManagerUpdated(tokenIds[_i], address(_lockManager));
+            }
 
             unchecked {
                 ++_i;
@@ -566,6 +564,9 @@ contract JB721StakingDelegate is
 
         // Delete the lock manager for the receiver since this token now (probably) belongs to some other user.
         delete lockManager[_tokenId];
+
+        // Emit the event that it was unlocked.
+        emit LockManagerUpdated(_tokenId, address(0));
     }
 
     /// @notice Transfer voting units after the transfer of a token.

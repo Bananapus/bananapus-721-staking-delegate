@@ -31,6 +31,12 @@ import {IJBDelegatesRegistry} from "@jbx-protocol/juice-delegates-registry/src/i
 /// @notice Deploy Juicebox projects with a single purpose of providing staking functionality.
 contract JB721StakingDelegateDeployer is IERC721Receiver {
     //*********************************************************************//
+    // --------------------------- custom errors ------------------------- //
+    //*********************************************************************//
+    /// @notice Thrown when an 721 is transfered to the deployer that is not a Juicebox project
+    error INVALID_721(address _address);
+
+    //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
     //*********************************************************************//
 
@@ -174,13 +180,11 @@ contract JB721StakingDelegateDeployer is IERC721Receiver {
         _stakingProjectId = _launchProject(_projectMetadata, _delegate, _terminals);
     }
 
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
-        external
-        returns (bytes4)
-    {
-        if (msg.sender == address(projects)) {
-            return IERC721Receiver.onERC721Received.selector;
-        }
+    /// @notice Used to receive ownership of a staking project
+    /// @dev Reverts if the received ERC721 is not JBProjects
+    function onERC721Received(address, address, uint256, bytes calldata) external view returns (bytes4) {
+        if (msg.sender != address(projects)) revert INVALID_721(msg.sender);
+        return IERC721Receiver.onERC721Received.selector;
     }
 
     //*********************************************************************//
