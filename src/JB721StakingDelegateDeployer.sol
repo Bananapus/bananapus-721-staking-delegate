@@ -174,12 +174,10 @@ contract JB721StakingDelegateDeployer is IERC721Receiver {
         _stakingProjectId = _launchProject(_projectMetadata, _delegate, _terminals);
     }
 
-     function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external returns (bytes4) {
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        returns (bytes4)
+    {
         if (msg.sender == address(projects)) {
             return IERC721Receiver.onERC721Received.selector;
         }

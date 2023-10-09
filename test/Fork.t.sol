@@ -115,8 +115,16 @@ contract EmptyTest_Fork is Test {
         stakingToken.approve(address(stakingTerminal), _cost);
 
         // Encode the metadata
-        bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJB721StakingDelegate).interfaceId, false, _delegatingTo, _tiers, address(0), bytes(''));
+        bytes memory _metadata = abi.encode(
+            bytes32(0),
+            bytes32(0),
+            type(IJB721StakingDelegate).interfaceId,
+            false,
+            _delegatingTo,
+            _tiers,
+            address(0),
+            bytes("")
+        );
 
         // Perform the pay (aka. stake the tokens)
         stakingTerminal.pay(projectId, _cost, address(stakingToken), _payer, 0, false, string(""), _metadata);
@@ -139,6 +147,7 @@ contract EmptyTest_Fork is Test {
     // we use this local var so we can use `push` because we don't know the size of the array beforehand
     uint256[] _tokenIds;
     // Helpers
+
     function _mintTokens(address _to, uint256 _amount) internal {
         IJBToken _stakingToken = IJBToken(address(stakingToken));
         // Prank as being the contract owner (the tokenStore usually)
