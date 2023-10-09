@@ -1,3 +1,6 @@
+# Commented out and moved out of the workflows dir
+# since we don't have anywhere to publish to yet
+
 # name: juice-contracts-publish
 # on:
 #   push:
