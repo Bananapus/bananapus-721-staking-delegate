@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {JBCurrencies} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBCurrencies.sol";
 import {JBProjectMetadata} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBProjectMetadata.sol";
 import {JBGroupedSplits} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBGroupedSplits.sol";
@@ -13,6 +12,8 @@ import {JBFundAccessConstraints} from "@jbx-protocol/juice-contracts-v3/contract
 import {JB721StakingDelegate} from "./JB721StakingDelegate.sol";
 import {JBERC20TerminalDeployer} from "./JBERC20TerminalDeployer.sol";
 
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import {IJBController} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
 import {IJBSingleTokenPaymentTerminalStore} from
@@ -28,7 +29,7 @@ import {IJB721TokenUriResolver} from "@jbx-protocol/juice-721-delegate/contracts
 import {IJBDelegatesRegistry} from "@jbx-protocol/juice-delegates-registry/src/interfaces/IJBDelegatesRegistry.sol";
 
 /// @notice Deploy Juicebox projects with a single purpose of providing staking functionality.
-contract JB721StakingDelegateDeployer {
+contract JB721StakingDelegateDeployer is IERC721Receiver {
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
     //*********************************************************************//
@@ -171,6 +172,17 @@ contract JB721StakingDelegateDeployer {
 
         // Deploy the project and configure it to use the delegate and project token terminal
         _stakingProjectId = _launchProject(_projectMetadata, _delegate, _terminals);
+    }
+
+     function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4) {
+        if (msg.sender == address(projects)) {
+            return IERC721Receiver.onERC721Received.selector;
+        }
     }
 
     //*********************************************************************//
