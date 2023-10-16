@@ -7,7 +7,10 @@ import {Votes} from "@jbx-protocol/juice-721-delegate/contracts/abstract/Votes.s
 import {JB721StakingTier} from "./struct/JB721StakingTier.sol";
 import {JB721Tier} from "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
 import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
-import {JBDidPayData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData.sol";
+import {JBDidPayData3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData3_1_1.sol";
+import {JBDidRedeemData3_1_1 } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidRedeemData3_1_1.sol";
+import { JBRedemptionDelegateAllocation3_1_1 } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
+import {JBDelegateMetadataLib} from "@jbx-protocol/juice-delegate-metadata-lib/src/JBDelegateMetadataLib.sol";
 import {JBRedemptionDelegateAllocation} from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation.sol";
 
@@ -257,7 +260,7 @@ contract JB721StakingDelegate is
         bytes32 _encodedIPFSUri,
         uint256 _tierMultiplier,
         uint8 _maxTierId
-    ) {
+    ) JB721Delegate(_directory, type(IJB721StakingDelegate).interfaceId, type(IJB721Delegate).interfaceId) {
         if (projectId != 0) revert();
         if (_maxTierId > 59) revert INVALID_MAX_TIER();
 
@@ -270,7 +273,7 @@ contract JB721StakingDelegate is
         tierMultiplier = _tierMultiplier;
 
         // Initialize the superclass.
-        JB721Delegate._initialize(_projectId, _directory, _name, _symbol);
+        JB721Delegate._initialize(_projectId, _name, _symbol);
     }
 
     //*********************************************************************//
@@ -314,56 +317,43 @@ contract JB721StakingDelegate is
 
     /// @notice Process a received payment.
     /// @param _data The Juicebox standard project payment data.
-    function _processPayment(JBDidPayData calldata _data) internal virtual override {
+    function _processPayment(JBDidPayData3_1_1 calldata _data) internal virtual override {
         // Only payment in the staking token is allowed.
         if (IERC20(_data.amount.token) != stakingToken) revert INVALID_TOKEN();
 
         // Keep a reference to the leftover amount.
         uint256 _leftoverAmount = _data.amount.value;
 
-        // Keep a reference to the address that should be given attestation votes from this mint.
-        address _votingDelegate;
+        // Fetch this delegates metadata from the delegate id
+        (bool _found, bytes memory _metadata) = JBDelegateMetadataLib.getMetadata(payMetadataDelegateId, _data.payerMetadata);
 
-        // Skip the first 32 bytes which are used by the JB protocol to pass the referring project's ID.
-        // Skip another 32 bytes reserved for generic extension parameters.
-        // Check the 4 bytes interfaceId to verify the metadata is intended for this contract.
-        if (_data.metadata.length > 68 && bytes4(_data.metadata[64:68]) == type(IJB721StakingDelegate).interfaceId) {
-            // Keep a reference to the the specific tier IDs to mint.
-            JB721StakingTier[] memory _tierIdsToMint;
+        // Make sure that the metadata was passed
+        if(!_found) revert INVALID_PAYMENT_METADATA();
 
-            // Keep a reference to the lock manager to use.
-            IBPLockManager _lockManager;
+        // Decode the metadata.
+        (address _votingDelegate, JB721StakingTier[] memory _tierIdsToMint, IBPLockManager _lockManager, bytes memory _lockManagerData) = abi.decode(
+            _metadata, (address, JB721StakingTier[], IBPLockManager, bytes)
+        );
 
-            // Keep a reference to the lock manager data to register the lock manager with.
-            bytes memory _lockManagerData;
+        // Only allow delegation if the payer is the beneficiary.
+        if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
 
-            // Decode the metadata.
-            (,,,, _votingDelegate, _tierIdsToMint, _lockManager, _lockManagerData) = abi.decode(
-                _data.metadata, (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[], IBPLockManager, bytes)
-            );
+        // Mint the specified tiers with the custom stake amount
+        uint256[] memory _tokenIds;
 
-            // Only allow delegation if the payer is the beneficiary.
-            if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
+        // Mint 721 positions for the staked amount.
+        (_leftoverAmount, _tokenIds) =
+            _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
 
-            // Mint the specified tiers with the custom stake amount
-            uint256[] memory _tokenIds;
-
-            // Mint 721 positions for the staked amount.
-            (_leftoverAmount, _tokenIds) =
-                _mintTiers(_leftoverAmount, _tierIdsToMint, _data.beneficiary, _votingDelegate, _lockManager);
-
-            // Register the lock manager if needed.
-            if (address(_lockManager) != address(0)) {
-                _lockManager.onRegistration(
-                    _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
-                );
-            }
-        } else {
-            revert INVALID_PAYMENT_METADATA();
-        }
-
-        // All paid tokens must be staked.
+        // All paid tokens must be part of the staked positions.
         if (_leftoverAmount != 0) revert OVERSPENDING();
+
+        // Register the lock manager if needed.
+        if (address(_lockManager) != address(0)) {
+            _lockManager.onRegistration(
+                _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
+            );
+        }
     }
 
     /// @notice Part of IJBFundingCycleDataSource, this function gets called when a project's token holders redeem.
@@ -376,23 +366,23 @@ contract JB721StakingDelegate is
         view
         virtual
         override
-        returns (uint256 reclaimAmount, string memory memo, JBRedemptionDelegateAllocation[] memory delegateAllocations)
+        returns (uint256 reclaimAmount, string memory memo, JBRedemptionDelegateAllocation3_1_1[] memory delegateAllocations)
     {
         // Make sure fungible project tokens aren't being redeemed too.
         if (_data.tokenCount > 0) revert UNEXPECTED_TOKEN_REDEEMED();
 
-        // Check the 4 bytes interfaceId and handle the case where the metadata was not intended for this contract
-        // Skip 32 bytes reserved for generic extension parameters.
-        if (_data.metadata.length < 36 || bytes4(_data.metadata[32:36]) != type(IJB721Delegate).interfaceId) {
-            revert INVALID_REDEMPTION_METADATA();
-        }
+        // Fetch this delegates metadata from the delegate id
+        (bool _found, bytes memory _metadata) = JBDelegateMetadataLib.getMetadata(redeemMetadataDelegateId, _data.metadata);
+
+        // Make sure that the metadata was passed
+        if(!_found) revert INVALID_REDEMPTION_METADATA();
 
         // Set the only delegate allocation to be a callback to this contract.
-        delegateAllocations = new JBRedemptionDelegateAllocation[](1);
-        delegateAllocations[0] = JBRedemptionDelegateAllocation(this, 0);
+        delegateAllocations = new JBRedemptionDelegateAllocation3_1_1[](1);
+        delegateAllocations[0] = JBRedemptionDelegateAllocation3_1_1(this, 0, bytes(''));
 
         // Decode the metadata
-        (,, uint256[] memory _decodedTokenIds) = abi.decode(_data.metadata, (bytes32, bytes4, uint256[]));
+        (uint256[] memory _decodedTokenIds) = abi.decode(_metadata, (uint256[]));
 
         // Return the redemption weight of all the tokens.
         return (redemptionWeightOf(_decodedTokenIds, _data), _data.memo, delegateAllocations);
@@ -434,7 +424,7 @@ contract JB721StakingDelegate is
             if (leftoverAmount < _tiers[_i].amount) {
                 revert INSUFFICIENT_VALUE();
             }
-
+            // IBPLockManager(address(this)).onRedeem(_leftoverAmount, address(this));
             // Decrement the leftover amount.
             unchecked {
                 leftoverAmount -= _tiers[_i].amount;

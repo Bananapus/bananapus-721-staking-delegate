@@ -30,8 +30,8 @@ contract DeployGoerli is Script {
     IJBDirectory JBDirectory = IJBDirectory(0x8E05bcD2812E1449f0EC3aE24E2C395F533d9A99);
     IJBFundingCycleStore JBFundingCycleStore = IJBFundingCycleStore(0xB9Ee9d8203467f6EC0eAC81163d210bd1a7d3b55);
     IJBOperatorStore JBOperatorStore = IJBOperatorStore(0x99dB6b517683237dE9C494bbd17861f3608F3585);
-    IJBSingleTokenPaymentTerminalStore JBsingleTokenPaymentStore =
-        IJBSingleTokenPaymentTerminalStore(0x101cA528F6c2E35664529eB8aa0419Ae1f724b49);
+    IJBSingleTokenPaymentTerminalStore3_1_1 JBsingleTokenPaymentStore =
+        IJBSingleTokenPaymentTerminalStore3_1_1(0x101cA528F6c2E35664529eB8aa0419Ae1f724b49);
     IJBSplitsStore JBSplitsStore = IJBSplitsStore(0xce2Ce2F37fE5B2C2Dd047908B2F61c9c3f707272);
     IJBProjects JBProjects = IJBProjects(0x21263a042aFE4bAE34F08Bb318056C181bD96D3b);
     IJBDelegatesRegistry registry = IJBDelegatesRegistry(0xCe3Ebe8A7339D1f7703bAF363d26cD2b15D23C23);
@@ -79,7 +79,7 @@ contract DeployGoerli is Script {
         );
 
         // Deploy the test project
-        (uint256 _projectID, IJBPayoutRedemptionPaymentTerminal _stakingTerminal, JB721StakingDelegate _newDelegate) =
+        (uint256 _projectID, IJBPayoutRedemptionPaymentTerminal3_1_1 _stakingTerminal, JB721StakingDelegate _newDelegate) =
         delegateDeployer.deployStakingProject(
             JBProjectMetadata({content: "bafkreig2nxunu6oxhmj6grsam5e7rzs5l6geulbcdukbila43dq2gyofny", domain: 0}),
             IERC20Metadata(address(stakingToken)),

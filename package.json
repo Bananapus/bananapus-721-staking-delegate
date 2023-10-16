@@ -1,10 +1,12 @@
 {
   "dependencies": {
-    "@jbx-protocol/juice-721-delegate": "jbx-protocol/juice-721-delegate#version/3.3",
-    "@jbx-protocol/juice-contracts-v3": "^2.0.3",
+    "@jbx-protocol/juice-721-delegate": "^8.0.0",
+    "@jbx-protocol/juice-contracts-v3": "^5.0.0",
+    "@jbx-protocol/juice-delegate-metadata-lib": "https://github.com/jbx-protocol/juice-delegate-metadata-lib.git",
     "@jbx-protocol/juice-delegates-registry": "^1.0.1",
     "@openzeppelin/contracts": "^4.8.1",
-    "@paulrberg/contracts": "^3.7.0"
+    "@paulrberg/contracts": "^3.7.0",
+    "@prb/math": "^4.0.1"
   },
   "scripts": {
     "test": "forge test",
