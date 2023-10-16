@@ -79,8 +79,11 @@ contract DeployGoerli is Script {
         );
 
         // Deploy the test project
-        (uint256 _projectID, IJBPayoutRedemptionPaymentTerminal3_1_1 _stakingTerminal, JB721StakingDelegate _newDelegate) =
-        delegateDeployer.deployStakingProject(
+        (
+            uint256 _projectID,
+            IJBPayoutRedemptionPaymentTerminal3_1_1 _stakingTerminal,
+            JB721StakingDelegate _newDelegate
+        ) = delegateDeployer.deployStakingProject(
             JBProjectMetadata({content: "bafkreig2nxunu6oxhmj6grsam5e7rzs5l6geulbcdukbila43dq2gyofny", domain: 0}),
             IERC20Metadata(address(stakingToken)),
             IJB721TokenUriResolver(_resolver),

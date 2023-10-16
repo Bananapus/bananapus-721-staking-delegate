@@ -8,8 +8,9 @@ import {JB721StakingTier} from "./struct/JB721StakingTier.sol";
 import {JB721Tier} from "@jbx-protocol/juice-721-delegate/contracts/structs/JB721Tier.sol";
 import {JBRedeemParamsData} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedeemParamsData.sol";
 import {JBDidPayData3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData3_1_1.sol";
-import {JBDidRedeemData3_1_1 } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidRedeemData3_1_1.sol";
-import { JBRedemptionDelegateAllocation3_1_1 } from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
+import {JBDidRedeemData3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidRedeemData3_1_1.sol";
+import {JBRedemptionDelegateAllocation3_1_1} from
+    "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation3_1_1.sol";
 import {JBDelegateMetadataLib} from "@jbx-protocol/juice-delegate-metadata-lib/src/JBDelegateMetadataLib.sol";
 import {JBRedemptionDelegateAllocation} from
     "@jbx-protocol/juice-contracts-v3/contracts/structs/JBRedemptionDelegateAllocation.sol";
@@ -325,15 +326,19 @@ contract JB721StakingDelegate is
         uint256 _leftoverAmount = _data.amount.value;
 
         // Fetch this delegates metadata from the delegate id
-        (bool _found, bytes memory _metadata) = JBDelegateMetadataLib.getMetadata(payMetadataDelegateId, _data.payerMetadata);
+        (bool _found, bytes memory _metadata) =
+            JBDelegateMetadataLib.getMetadata(payMetadataDelegateId, _data.payerMetadata);
 
         // Make sure that the metadata was passed
-        if(!_found) revert INVALID_PAYMENT_METADATA();
+        if (!_found) revert INVALID_PAYMENT_METADATA();
 
         // Decode the metadata.
-        (address _votingDelegate, JB721StakingTier[] memory _tierIdsToMint, IBPLockManager _lockManager, bytes memory _lockManagerData) = abi.decode(
-            _metadata, (address, JB721StakingTier[], IBPLockManager, bytes)
-        );
+        (
+            address _votingDelegate,
+            JB721StakingTier[] memory _tierIdsToMint,
+            IBPLockManager _lockManager,
+            bytes memory _lockManagerData
+        ) = abi.decode(_metadata, (address, JB721StakingTier[], IBPLockManager, bytes));
 
         // Only allow delegation if the payer is the beneficiary.
         if (_votingDelegate != address(0) && _data.payer != _data.beneficiary) revert DELEGATION_NOT_ALLOWED();
@@ -350,9 +355,7 @@ contract JB721StakingDelegate is
 
         // Register the lock manager if needed.
         if (address(_lockManager) != address(0)) {
-            _lockManager.onRegistration(
-                _data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData
-            );
+            _lockManager.onRegistration(_data.payer, _data.beneficiary, _data.amount.value, _tokenIds, _lockManagerData);
         }
     }
 
@@ -366,20 +369,25 @@ contract JB721StakingDelegate is
         view
         virtual
         override
-        returns (uint256 reclaimAmount, string memory memo, JBRedemptionDelegateAllocation3_1_1[] memory delegateAllocations)
+        returns (
+            uint256 reclaimAmount,
+            string memory memo,
+            JBRedemptionDelegateAllocation3_1_1[] memory delegateAllocations
+        )
     {
         // Make sure fungible project tokens aren't being redeemed too.
         if (_data.tokenCount > 0) revert UNEXPECTED_TOKEN_REDEEMED();
 
         // Fetch this delegates metadata from the delegate id
-        (bool _found, bytes memory _metadata) = JBDelegateMetadataLib.getMetadata(redeemMetadataDelegateId, _data.metadata);
+        (bool _found, bytes memory _metadata) =
+            JBDelegateMetadataLib.getMetadata(redeemMetadataDelegateId, _data.metadata);
 
         // Make sure that the metadata was passed
-        if(!_found) revert INVALID_REDEMPTION_METADATA();
+        if (!_found) revert INVALID_REDEMPTION_METADATA();
 
         // Set the only delegate allocation to be a callback to this contract.
         delegateAllocations = new JBRedemptionDelegateAllocation3_1_1[](1);
-        delegateAllocations[0] = JBRedemptionDelegateAllocation3_1_1(this, 0, bytes(''));
+        delegateAllocations[0] = JBRedemptionDelegateAllocation3_1_1(this, 0, bytes(""));
 
         // Decode the metadata
         (uint256[] memory _decodedTokenIds) = abi.decode(_metadata, (uint256[]));

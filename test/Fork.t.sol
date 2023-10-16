@@ -11,7 +11,7 @@ import "../src/distributor/JB721StakingDistributor.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/JBERC20PaymentTerminal.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
-import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol"; 
+import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleStore.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
