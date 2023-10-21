@@ -42,4 +42,8 @@ contract JB721StakingDistributor is JBDistributor {
     function _totalStake(uint256 _blockNumber) internal view virtual override returns (uint256 _stakedAmount) {
         return delegate.getPastTotalSupply(_blockNumber);
     }
+
+    function _tokenBurned(uint256 _tokenId) internal view virtual override returns (bool tokenWasBurned) {
+        return !delegate.exists(_tokenId);
+    }
 }

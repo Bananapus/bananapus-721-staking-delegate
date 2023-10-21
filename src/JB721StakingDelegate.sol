@@ -111,6 +111,13 @@ contract JB721StakingDelegate is
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
+    /// @notice Returns whether `tokenId` exists.
+    /// @param tokenId the id to check
+    /// @return Bool indicating if the token exists
+    function exists(uint256 tokenId) external view virtual returns (bool) {
+        return _exists(tokenId);
+    }
+
     /// @notice Returns information for a specific tier.
     /// @param _id The ID of the tier to get.
     /// @param _includeResolvedUri A flag indicating if the URI should be resolved within the returned tier.

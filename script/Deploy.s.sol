@@ -167,6 +167,7 @@ contract Claim is Script {
 contract Collect is Script {
     JB721StakingDistributor _distributor = JB721StakingDistributor(0x314A84CCad8bd49e1d198c048f281A416B4b5824);
     IERC20 _token = IERC20(0x6eaB554233DbDafA8197ab2B9E4a471585711618);
+    address _beneficiary = address(0x1111111); // NOTICE Change to the correct beneficiary
 
     function setUp() public {}
 
@@ -183,7 +184,7 @@ contract Collect is Script {
         uint256[] memory nftIds = new uint256[](1);
         nftIds[0] = 1;
 
-        _distributor.collectVestedRewards(nftIds, tokens, 10);
+        _distributor.collectVestedRewards(nftIds, tokens, 10, _beneficiary);
 
         vm.stopBroadcast();
     }

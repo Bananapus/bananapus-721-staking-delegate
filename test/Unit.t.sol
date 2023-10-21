@@ -397,7 +397,7 @@ contract DelegateTest_Unit is Test {
 
         // Collect the tokens
         vm.prank(_beneficiary);
-        _distributor.collectVestedRewards(nftIds, tokens, _vestedCycle);
+        _distributor.collectVestedRewards(nftIds, tokens, _vestedCycle, _beneficiary);
 
         // In this test the user should receive the full amount, since its the only person that holds the tokens
         assertEq(_token.balanceOf(_beneficiary), _amountToDistribute);
