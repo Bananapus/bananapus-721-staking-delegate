@@ -11,6 +11,8 @@ import "../src/distributor/JB721StakingDistributor.sol";
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {JBTokenAmount} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBTokenAmount.sol";
 import {JBConstants} from "@jbx-protocol/juice-contracts-v3/contracts/libraries/JBConstants.sol";
+import {JBDidPayData3_1_1} from "@jbx-protocol/juice-contracts-v3/contracts/structs/JBDidPayData3_1_1.sol";
+import {JBDelegateMetadataHelper} from "@jbx-protocol/juice-delegate-metadata-lib/src/JBDelegateMetadataHelper.sol";
 
 contract DelegateTest_Unit is Test {
     using stdStorage for StdStorage;
@@ -27,8 +29,8 @@ contract DelegateTest_Unit is Test {
     IJBController _controller = IJBController(_mockContract("jb_controller"));
     IJBDirectory _directory = IJBDirectory(_mockContract("jb_directory"));
     IJBPaymentTerminal _terminal = IJBPaymentTerminal(_mockContract("jb_payment_terminal"));
-    IJBSingleTokenPaymentTerminalStore _terminalStore =
-        IJBSingleTokenPaymentTerminalStore(_mockContract("jb_terminal_store"));
+    IJBSingleTokenPaymentTerminalStore3_1_1 _terminalStore =
+        IJBSingleTokenPaymentTerminalStore3_1_1(_mockContract("jb_terminal_store"));
     IJBSplitsStore _splitStore = IJBSplitsStore(_mockContract("jb_split_store"));
     IJB721TokenUriResolver _resolver = IJB721TokenUriResolver(_mockContract("jb_token_resolver"));
     IJBOperatorStore _operatorStore = IJBOperatorStore(_mockContract("jb_operator_store"));
@@ -37,6 +39,7 @@ contract DelegateTest_Unit is Test {
     IJBDelegatesRegistry _delegateRegistry = IJBDelegatesRegistry(_mockContract("jb_delegate_registry"));
 
     JB721StakingDelegateDeployer _deployer;
+    JBDelegateMetadataHelper _metadataHelper;
 
     function setUp() public {
         // Deploy the deployer
@@ -50,6 +53,14 @@ contract DelegateTest_Unit is Test {
             _terminalDeployer,
             _delegateRegistry
         );
+
+        vm.mockCall(
+            address(_directory),
+            abi.encodeWithSelector(IJBDirectory.isTerminalOf.selector, _projectId, address(this)),
+            abi.encode(true)
+        );
+
+        _metadataHelper = new JBDelegateMetadataHelper();
     }
 
     function testDeploy() public {
@@ -101,12 +112,14 @@ contract DelegateTest_Unit is Test {
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierStakeAmount});
 
+        JBDidPayData3_1_1 memory _payData = _buildPayData(_payer, _tierCost, _payer, _tiers);
+
         vm.expectRevert(
             abi.encodeWithSelector(STAKE_NOT_ENOUGH_FOR_TIER.selector, _tierId, _tierCost, _tierStakeAmount)
         );
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _tierCost, _payer, _tiers));
+        _delegate.didPay(_payData);
     }
 
     function testMint_customStakeAmount_reverts_paymentTooSmall(address _payer, uint16 _tierId, uint128 _paymentAmount)
@@ -125,10 +138,12 @@ contract DelegateTest_Unit is Test {
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierCost});
 
+        JBDidPayData3_1_1 memory _payData = _buildPayData(_payer, _paymentAmount, _payer, _tiers);
+
         vm.expectRevert(INSUFFICIENT_VALUE.selector);
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _payer, _tiers));
+        _delegate.didPay(_payData);
     }
 
     function testMint_customStakeAmount_reverts_paymentTooBig(address _payer, uint16 _tierId, uint128 _paymentAmount)
@@ -146,10 +161,12 @@ contract DelegateTest_Unit is Test {
         JB721StakingTier[] memory _tiers = new JB721StakingTier[](1);
         _tiers[0] = JB721StakingTier({tierId: _tierId, amount: _tierCost});
 
+        JBDidPayData3_1_1 memory _payData = _buildPayData(_payer, _paymentAmount, _payer, _tiers);
+
         vm.expectRevert(OVERSPENDING.selector);
 
         vm.prank(address(_terminal));
-        _delegate.didPay(_buildPayData(_payer, _paymentAmount, _payer, _tiers));
+        _delegate.didPay(_payData);
     }
 
     function testMint_beneficiaryReceivesVotingPower(
@@ -223,6 +240,7 @@ contract DelegateTest_Unit is Test {
         public
     {
         vm.assume(_tiers.length > 0);
+        vm.assume(_tiers.length < 200);
         vm.assume(_beneficiary != address(0));
 
         // Deploy the delegate
@@ -379,7 +397,7 @@ contract DelegateTest_Unit is Test {
 
         // Collect the tokens
         vm.prank(_beneficiary);
-        _distributor.collectVestedRewards(nftIds, tokens, _vestedCycle);
+        _distributor.collectVestedRewards(nftIds, tokens, _vestedCycle, _beneficiary);
 
         // In this test the user should receive the full amount, since its the only person that holds the tokens
         assertEq(_token.balanceOf(_beneficiary), _amountToDistribute);
@@ -602,21 +620,17 @@ contract DelegateTest_Unit is Test {
     function _buildPayData(address _payer, uint256 _value, address _beneficiary, JB721StakingTier[] memory _tiers)
         internal
         view
-        returns (JBDidPayData memory)
+        returns (JBDidPayData3_1_1 memory)
     {
-        // (bytes32, bytes32, bytes4, bool, address, JB721StakingTier[])
-        bytes memory _metadata = abi.encode(
-            bytes32(0),
-            bytes32(0),
-            type(IJB721StakingDelegate).interfaceId,
-            false,
-            _beneficiary,
-            _tiers,
-            address(0),
-            bytes("")
-        );
+        bytes4[] memory _ids = new bytes4[](1);
+        bytes[] memory _metadatas = new bytes[](1);
 
-        return JBDidPayData({
+        _ids[0] = type(IJB721StakingDelegate).interfaceId;
+        _metadatas[0] = abi.encode(_beneficiary, _tiers, address(0), bytes(""));
+
+        bytes memory _metadata = _metadataHelper.createMetadata(_ids, _metadatas);
+
+        return JBDidPayData3_1_1({
             payer: _payer,
             projectId: _projectId,
             currentFundingCycleConfiguration: 0,
@@ -626,7 +640,8 @@ contract DelegateTest_Unit is Test {
             beneficiary: _beneficiary,
             preferClaimedTokens: false,
             memo: "",
-            metadata: _metadata
+            dataSourceMetadata: "",
+            payerMetadata: _metadata
         });
     }
 
@@ -635,7 +650,13 @@ contract DelegateTest_Unit is Test {
         view
         returns (JBRedeemParamsData memory)
     {
-        bytes memory _metadata = abi.encode(bytes32(0), type(IJB721Delegate).interfaceId, _tokenIds);
+        bytes4[] memory _ids = new bytes4[](1);
+        bytes[] memory _metadatas = new bytes[](1);
+
+        _ids[0] = type(IJB721Delegate).interfaceId;
+        _metadatas[0] = abi.encode(_tokenIds);
+
+        bytes memory _metadata = _metadataHelper.createMetadata(_ids, _metadatas);
 
         return JBRedeemParamsData({
             terminal: _terminal,
@@ -648,29 +669,6 @@ contract DelegateTest_Unit is Test {
             reclaimAmount: JBTokenAmount({token: address(0), value: 0, decimals: 0, currency: 0}),
             useTotalOverflow: false,
             redemptionRate: JBConstants.MAX_REDEMPTION_RATE,
-            memo: "",
-            metadata: _metadata
-        });
-    }
-
-    function _buildPayData(address _payer, uint256 _value, address _beneficiary, uint16[] memory _tierIds)
-        internal
-        view
-        returns (JBDidPayData memory)
-    {
-        // (bytes32, bytes32, bytes4, bool, JB721StakingTier[])
-        bytes memory _metadata =
-            abi.encode(bytes32(0), bytes32(0), type(IJBTiered721Delegate).interfaceId, false, _tierIds);
-
-        return JBDidPayData({
-            payer: _payer,
-            projectId: _projectId,
-            currentFundingCycleConfiguration: 0,
-            amount: JBTokenAmount({token: address(_stakingToken), value: _value, decimals: 18, currency: 0}),
-            forwardedAmount: JBTokenAmount({token: address(0), value: 0, decimals: 0, currency: 0}),
-            projectTokenCount: 0,
-            beneficiary: _beneficiary,
-            preferClaimedTokens: false,
             memo: "",
             metadata: _metadata
         });

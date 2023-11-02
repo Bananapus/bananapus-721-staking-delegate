@@ -16,15 +16,15 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {IJBDirectory} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import {IJBController} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
-import {IJBSingleTokenPaymentTerminalStore} from
-    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSingleTokenPaymentTerminalStore.sol";
+import {IJBSingleTokenPaymentTerminalStore3_1_1} from
+    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSingleTokenPaymentTerminalStore3_1_1.sol";
 import {IJBOperatorStore} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatorStore.sol";
 import {IJBSplitsStore} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBSplitsStore.sol";
 import {IJBProjects} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBProjects.sol";
 import {IJBPaymentTerminal} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPaymentTerminal.sol";
 import {IJBFundingCycleBallot} from "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleBallot.sol";
-import {IJBPayoutRedemptionPaymentTerminal} from
-    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal.sol";
+import {IJBPayoutRedemptionPaymentTerminal3_1_1} from
+    "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
 import {IJB721TokenUriResolver} from "@jbx-protocol/juice-721-delegate/contracts/interfaces/IJB721TokenUriResolver.sol";
 import {IJBDelegatesRegistry} from "@jbx-protocol/juice-delegates-registry/src/interfaces/IJBDelegatesRegistry.sol";
 
@@ -54,7 +54,7 @@ contract JB721StakingDelegateDeployer is IERC721Receiver {
     IJBDirectory public immutable directory;
 
     /// @notice The contract that stores and manages payment terminal data.
-    IJBSingleTokenPaymentTerminalStore public immutable paymentTerminalStore;
+    IJBSingleTokenPaymentTerminalStore3_1_1 public immutable paymentTerminalStore;
 
     /// @notice A contract storing operator assignments.
     IJBOperatorStore public immutable operatorStore;
@@ -88,7 +88,7 @@ contract JB721StakingDelegateDeployer is IERC721Receiver {
         IJBDirectory _directory,
         IJBProjects _projects,
         IJBOperatorStore _operatorStore,
-        IJBSingleTokenPaymentTerminalStore _paymentTerminalStore,
+        IJBSingleTokenPaymentTerminalStore3_1_1 _paymentTerminalStore,
         IJBSplitsStore _splitStore,
         JBERC20TerminalDeployer _terminalDeployer,
         IJBDelegatesRegistry _delegatesRegistry
@@ -137,7 +137,7 @@ contract JB721StakingDelegateDeployer is IERC721Receiver {
         external
         returns (
             uint256 _stakingProjectId,
-            IJBPayoutRedemptionPaymentTerminal _stakingTerminal,
+            IJBPayoutRedemptionPaymentTerminal3_1_1 _stakingTerminal,
             JB721StakingDelegate _delegate
         )
     {

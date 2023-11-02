@@ -14,8 +14,8 @@ struct TentacleCreateData {
 }
 
 contract BananapusPayScript is Script {
-    IJBPayoutRedemptionPaymentTerminal stakingTerminal =
-        IJBPayoutRedemptionPaymentTerminal(0x2a402Ba7E72Ddf3CfFDfacE834fc1Dad548710c0); // 0x2a402Ba7E72Ddf3CfFDfacE834fc1Dad548710c0
+    IJBPayoutRedemptionPaymentTerminal3_1_1 stakingTerminal =
+        IJBPayoutRedemptionPaymentTerminal3_1_1(0x2a402Ba7E72Ddf3CfFDfacE834fc1Dad548710c0); // 0x2a402Ba7E72Ddf3CfFDfacE834fc1Dad548710c0
     WETH stakingToken = WETH(payable(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6)); // WETH on Goerli
 
     function setUp() public {}

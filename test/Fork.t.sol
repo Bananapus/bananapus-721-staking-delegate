@@ -9,11 +9,16 @@ import "../src/JB721StakingDelegateDeployer.sol";
 import "../src/distributor/JB721StakingDistributor.sol";
 
 import "@jbx-protocol/juice-contracts-v3/contracts/JBERC20PaymentTerminal.sol";
+import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBToken.sol";
+import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBOperatable.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBController.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBDirectory.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBFundingCycleStore.sol";
-import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal.sol";
+import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBPayoutRedemptionPaymentTerminal3_1_1.sol";
 import "@jbx-protocol/juice-contracts-v3/contracts/interfaces/IJBProjects.sol";
+import "@jbx-protocol/juice-delegate-metadata-lib/src/JBDelegateMetadataHelper.sol";
+
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 // import "../src/Empty.sol";
 
@@ -21,13 +26,14 @@ contract EmptyTest_Fork is Test {
     IJBController JBController;
     IJBDirectory JBDirectory;
     IJBFundingCycleStore JBFundingCycleStore;
-    IJBPayoutRedemptionPaymentTerminal JBEthTerminal;
-    IJBPayoutRedemptionPaymentTerminal stakingTerminal;
-    IJBSingleTokenPaymentTerminalStore JBsingleTokenPaymentStore;
+    IJBPayoutRedemptionPaymentTerminal3_1_1 JBEthTerminal;
+    IJBPayoutRedemptionPaymentTerminal3_1_1 stakingTerminal;
+    IJBSingleTokenPaymentTerminalStore3_1_1 JBsingleTokenPaymentStore;
     IJBSplitsStore JBSplitsStore;
     IJBProjects JBProjects;
     JB721StakingDelegate delegate;
-    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0x7A53cAA1dC4d752CAD283d039501c0Ee45719FaC);
+    IJBDelegatesRegistry registry = IJBDelegatesRegistry(0x33265D9eaD1291FAA981a177278dF8053aF24221);
+    JBDelegateMetadataHelper metadataHelper;
 
     address projectOwner = address(0x7331);
 
@@ -39,22 +45,22 @@ contract EmptyTest_Fork is Test {
         // Collect the mainnet deployment addresses
         JBController = IJBController(
             stdJson.readAddress(
-                vm.readFile("./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBController.json"),
+                vm.readFile("./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBController3_1.json"),
                 ".address"
             )
         );
-        JBEthTerminal = IJBPayoutRedemptionPaymentTerminal(
+        JBEthTerminal = IJBPayoutRedemptionPaymentTerminal3_1_1(
             stdJson.readAddress(
                 vm.readFile(
-                    "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBETHPaymentTerminal.json"
+                    "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBETHPaymentTerminal3_1_2.json"
                 ),
                 ".address"
             )
         );
-        JBsingleTokenPaymentStore = IJBSingleTokenPaymentTerminalStore(
+        JBsingleTokenPaymentStore = IJBSingleTokenPaymentTerminalStore3_1_1(
             stdJson.readAddress(
                 vm.readFile(
-                    "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBSingleTokenPaymentTerminalStore.json"
+                    "./node_modules/@jbx-protocol/juice-contracts-v3/deployments/mainnet/JBSingleTokenPaymentTerminalStore3_1_1.json"
                 ),
                 ".address"
             )
@@ -76,7 +82,7 @@ contract EmptyTest_Fork is Test {
             JBController, 
             JBDirectory,
             JBDirectory.projects(),
-            JBOperatable(address(JBDirectory)).operatorStore(),
+            IJBOperatable(address(JBDirectory)).operatorStore(),
             JBsingleTokenPaymentStore,
             JBSplitsStore,
             _terminalDeployer,
@@ -93,6 +99,8 @@ contract EmptyTest_Fork is Test {
             10 ** 18,
             59
         );
+
+        metadataHelper = new JBDelegateMetadataHelper();
     }
 
     function testPay_customStakeAmount(uint16 _tierId, uint128 _customAdditionalStakeAmount, address _delegatingTo)
@@ -115,16 +123,14 @@ contract EmptyTest_Fork is Test {
         stakingToken.approve(address(stakingTerminal), _cost);
 
         // Encode the metadata
-        bytes memory _metadata = abi.encode(
-            bytes32(0),
-            bytes32(0),
-            type(IJB721StakingDelegate).interfaceId,
-            false,
-            _delegatingTo,
-            _tiers,
-            address(0),
-            bytes("")
-        );
+
+        bytes4[] memory _ids = new bytes4[](1);
+        bytes[] memory _metadatas = new bytes[](1);
+
+        _ids[0] = type(IJB721StakingDelegate).interfaceId;
+        _metadatas[0] = abi.encode(_delegatingTo, _tiers, address(0), bytes(""));
+
+        bytes memory _metadata = metadataHelper.createMetadata(_ids, _metadatas);
 
         // Perform the pay (aka. stake the tokens)
         stakingTerminal.pay(projectId, _cost, address(stakingToken), _payer, 0, false, string(""), _metadata);
