@@ -1,24 +1,18 @@
-# juice-contract-template
-Template used to code juicy solidity stuff - includes forge, libs, etc
+# Bananapus Staking Delegate
 
-Install dependencies (forge tests, Juice-contracts-V3, OZ) via `forge install && yarn install`
+`JB721StakingDelegate.sol` manages the issuance and redemption of NFTs representing locked ERC-20 token positions. The delegate is associated with a Juicebox project and is called after the project's ERC-20 terminal is paid.
 
-Use this template as a starting point, do not push straight on main, rather create a new branch and open a PR - your reviewer will love you for this.
+- The delegate accepts a specified ERC-20 token (`stakingToken`) for staking. This is the only token accepted for payments.
+- The delegate issues NFTs to represent locked token positions. These NFTs can be redeemed later, and the contract handles the redemption process.
+- The delegate supports multiple tiers of NFTs, each with its own minimum staking threshold. The `tierMultiplier` is used to adjust the staking mechanism to various expected token supplies.
+- Each NFT has an associated [lock manager](https://github.com/Bananapus/bananapus-tentacles) (`IBPLockManager`). The lock manager can be set by the owner of the NFT or an approved operator.
+- The delegate supports voting delegation. When NFTs are minted, the beneficiary can delegate their votes to another address.
 
-# Generate an SVG
+## Usage
 
-use `forge script script/GenerateTierSVG.sol`, the SVG will be output to the path as defined in the script file (default: `./out/image.svg"`)
-
-
-
-
-
-# Usage
 use `yarn test` to run tests
 
 use `yarn test:fork` to run tests in CI mode (including slower mainnet fork tests)
-
-<br>
 
 use `yarn size` to check contract size
 
@@ -28,16 +22,20 @@ use `yarn lint` to lint the code
 
 use `yarn tree` to generate a Solidity dependency tree
 
-<br>
-
 use `yarn deploy:mainnet` and `yarn deploy:goerli` to deploy and verify (see .env.example for required env vars, using a ledger by default).
 
-## Code coverage
+use `forge script script/GenerateTierSVG.sol` to generate an SVG to the path as defined in the script file (default: `./out/image.svg"`)
+
+### Code coverage
+
 Run `yarn coverage`to display code coverage summary and generate an LCOV report
 
 To display code coverage in VSCode:
+
 - You need to install the [coverage gutters extension (Ryan Luker)](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters) or any other extension handling LCOV reports
 - ctrl shift p > "Coverage Gutters: Display Coverage" (coverage are the colored markdown lines in the left gutter, after the line numbers)
 
-## PR
+### PR
+
 Github CI flow will run both unit and forked tests, log the contracts size (with the tests) and check linting compliance.
+
